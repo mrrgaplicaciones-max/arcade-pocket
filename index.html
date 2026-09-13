@@ -36,7 +36,6 @@
             min-height: 100vh;
         }
 
-        /* HEADER MÓVIL */
         header {
             display: flex;
             justify-content: space-between;
@@ -73,7 +72,6 @@
             color: var(--neon-yellow);
         }
 
-        /* CONTROLES Y FILTRO */
         .controls-mobile {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -121,7 +119,6 @@
             border-radius: 6px;
         }
 
-        /* TARJETAS DE TAREAS ADAPTADAS */
         .stage-title {
             font-family: 'Press Start 2P', cursive;
             font-size: 10px;
@@ -145,7 +142,6 @@
             flex-direction: column;
             gap: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            transition: all 0.2s ease;
         }
 
         .task-card.card-Pendiente { border-left: 5px solid var(--border-panel); }
@@ -215,7 +211,6 @@
             text-transform: uppercase;
         }
 
-        /* GARAJE E HISTORIAL */
         .garage-section {
             margin-top: 30px;
             background: rgba(13, 10, 23, 0.7);
@@ -243,7 +238,6 @@
         }
         .btn-reactivate { font-size: 7px; padding: 6px 8px; border-color: var(--neon-cyan); color: var(--neon-cyan); }
 
-        /* BOTONES FLOTANTES */
         .floating-container {
             position: fixed;
             bottom: 20px;
@@ -272,7 +266,6 @@
             box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
         }
 
-        /* MODAL DEL JUEGO DE LA SERPIENTE */
         .snake-modal {
             display: none;
             position: fixed;
@@ -337,7 +330,7 @@
 
 <div class="controls-mobile">
     <button class="btn-save-local" onclick="exportarBackup()">📥 Respaldo</button>
-    <button class="btn-sync" onclick="descargarDeNube()">☁️ Cargar</button>
+    <button class="btn-sync" id="btnSyncDownload" onclick="descargarDeNube()">☁️ Cargar</button>
 </div>
 
 <div class="filter-row">
@@ -359,13 +352,11 @@
     <div id="garage-container"></div>
 </div>
 
-<!-- BOTONES FLOTANTES: NUBE + SERPIENTE -->
 <div class="floating-container">
     <div class="fab fab-snake" onclick="abrirSnake()" title="Jugar a la Serpiente">🐍</div>
     <div class="fab" id="btnFloatingCloud" onclick="subirANube()" title="Guardar en Sheets">☁️</div>
 </div>
 
-<!-- MODAL SNAKE -->
 <div class="snake-modal" id="snakeModal">
     <div class="snake-title">POCKET SNAKE [ <span id="snakeScore">0</span> ]</div>
     <canvas id="snakeCanvas" width="280" height="280"></canvas>
@@ -450,7 +441,6 @@
             const card = document.createElement('div');
             card.className = `task-card card-${task.estado}`;
 
-            // Fila Superior (Tipo y flechas)
             const topRow = document.createElement('div');
             topRow.className = 'card-top';
 
@@ -481,7 +471,6 @@
             }
             card.appendChild(topRow);
 
-            // Cuerpo dinámico
             const bodyDiv = document.createElement('div');
             if (task.tipo === "Tarea") {
                 const inputTarea = document.createElement('input');
@@ -520,7 +509,6 @@
             }
             card.appendChild(bodyDiv);
 
-            // Selector de estado
             if (task.tipo !== "") {
                 const selectEstado = document.createElement('select');
                 selectEstado.className = `status-select status-${task.estado}`;
@@ -632,22 +620,19 @@
 
     function subirANube() {
         if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_URL.startsWith("https://script.google.com/")) {
-            alert("⚠️ URL de Google Apps Script no configurada.");
+            alert("⚠️ URL no configurada.");
             return;
         }
 
-        // Filtra únicamente tareas reales
         const tareasValidas = pendientes.filter(t => t.tipo !== "");
         const garajeValido = garaje.filter(g => g.tipo !== "");
 
-        // Freno 1: Evita sobreescribir la nube si la lista del móvil está vacía
         if (tareasValidas.length === 0 && garajeValido.length === 0) {
-            alert("⛔ BLOQUEO DE SEGURIDAD: Tu lista local está vacía.\nNo se ha enviado nada para proteger los datos de la nube.");
+            alert("⛔ Tu lista está vacía. No se envía nada para no borrar la nube.");
             return;
         }
 
-        // Freno 2: Confirmación antes de enviar
-        const confirmar = confirm(`Vas a guardar en la nube:\n• ${tareasValidas.length} tareas activas\n• ${garajeValido.length} en garaje\n\n¿Quieres actualizar Google Sheets?`);
+        const confirmar = confirm(`¿Guardar en la nube?\n• ${tareasValidas.length} activas\n• ${garajeValido.length} en garaje`);
         if (!confirmar) return;
 
         const btn = document.getElementById('btnFloatingCloud');
@@ -667,7 +652,43 @@
         });
     }
 
-    // ==================== MINI JUEGO: SNAKE RETRO ====================
+    function descargarDeNube() {
+        if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_URL.startsWith("https://script.google.com/")) {
+            alert("⚠️ Revisa GOOGLE_SCRIPT_URL: la dirección no es válida.");
+            return;
+        }
+
+        const btn = document.getElementById('btnSyncDownload');
+        if (btn) btn.innerText = "⏳ LEYENDO...";
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "GET",
+            redirect: "follow"
+        })
+        .then(response => {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.json();
+        })
+        .then(data => {
+            if (btn) btn.innerText = "☁️ Cargar";
+            if (data.status === "success") {
+                pendientes = data.pendientes || [];
+                garaje = data.garaje || [];
+                guardarLocal();
+                asegurarUnaFilaVacia();
+                renderGaraje();
+                alert(`✅ ¡Cargadas ${pendientes.filter(t => t.tipo !== "").length} tareas y ${garaje.length} en garaje!`);
+            } else {
+                alert("⚠️ Error devuelto por Google: " + (data.message || "Desconocido"));
+            }
+        })
+        .catch(err => {
+            if (btn) btn.innerText = "☁️ Cargar";
+            alert("❌ Error de conexión: " + err.message + "\n\nAsegúrate de que en Google Apps Script la implementación web tenga acceso para 'Cualquier usuario'.");
+        });
+    }
+
+    // SNAKE
     const canvas = document.getElementById('snakeCanvas');
     const ctx = canvas.getContext('2d');
     const gridSize = 14;
@@ -712,7 +733,6 @@
     function bucleSnake() {
         const head = {x: snake[0].x + dx, y: snake[0].y + dy};
 
-        // Choque bordes (atravesar pantalla estilo clásico)
         const cols = canvas.width / gridSize;
         const rows = canvas.height / gridSize;
         if (head.x < 0) head.x = cols - 1;
@@ -720,7 +740,6 @@
         if (head.y < 0) head.y = rows - 1;
         if (head.y >= rows) head.y = 0;
 
-        // Auto-colisión
         for (let seg of snake) {
             if (seg.x === head.x && seg.y === head.y) {
                 reiniciarSnake();
@@ -730,11 +749,10 @@
 
         snake.unshift(head);
 
-        // Comer
         if (head.x === food.x && head.y === food.y) {
             snakeScore += 10;
             document.getElementById('snakeScore').innerText = snakeScore;
-            score += 50; // ¡Ganas XP reales para la app!
+            score += 50;
             actualizarScoreUI();
             guardarLocal();
             colocarComida();
@@ -742,19 +760,14 @@
             snake.pop();
         }
 
-        // Renderizado
         ctx.fillStyle = "#0d0a17";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Manzana
         ctx.fillStyle = "#ff007f";
         ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
 
-        // Serpiente
-        ctx.fillStyle = "#00ff66";
         snake.forEach((seg, i) => {
-            if (i === 0) ctx.fillStyle = "#00f3ff"; // Cabeza
-            else ctx.fillStyle = "#00ff66";
+            ctx.fillStyle = (i === 0) ? "#00f3ff" : "#00ff66";
             ctx.fillRect(seg.x * gridSize, seg.y * gridSize, gridSize - 1, gridSize - 1);
         });
     }
