@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#090614">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>ARCADE RIDER Pocket</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #090614;
+            --bg-panel-1: #151125; 
+            --bg-panel-2: #1e1638; 
+            --neon-pink: #ff007f;
+            --neon-cyan: #00f3ff;
+            --neon-yellow: #ffea00;
+            --neon-green: #00ff66;
+            --neon-purple: #9d00ff; 
+            --neon-orange: #ff9900;
+            --neon-red: #ff3333;
+            --text-main: #ffffff;
+            --text-dim: #8b85a1;
+            --border-panel: #2a2245;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Nunito', sans-serif;
+            padding: 12px 12px 90px 12px;
+            min-height: 100vh;
+        }
+
+        /* HEADER MÓVIL */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--neon-cyan);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .title-box h1 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 13px;
+            color: var(--neon-cyan);
+            text-shadow: 2px 2px 0px var(--neon-pink);
+            line-height: 1.4;
+        }
+
+        .title-box span {
+            font-size: 10px;
+            color: var(--neon-yellow);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .score-pill {
+            background: var(--bg-panel-1);
+            border: 2px solid var(--neon-pink);
+            border-radius: 6px;
+            padding: 6px 10px;
+            text-align: right;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            color: var(--neon-yellow);
+        }
+
+        /* CONTROLES Y FILTRO */
+        .controls-mobile {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        button {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            padding: 10px 6px;
+            background: var(--bg-panel-1);
+            color: var(--text-main);
+            border: 2px solid var(--neon-cyan);
+            cursor: pointer;
+            text-transform: uppercase;
+            border-radius: 6px;
+        }
+        button:active { transform: scale(0.97); }
+
+        .btn-sync { border-color: var(--neon-pink); color: var(--neon-pink); }
+        .btn-save-local { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .filter-label {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            color: var(--neon-yellow);
+        }
+
+        .filtro-select {
+            flex: 1;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            padding: 8px;
+            background: var(--bg-panel-1);
+            color: var(--neon-yellow);
+            border: 2px solid var(--neon-yellow);
+            border-radius: 6px;
+        }
+
+        /* TARJETAS DE TAREAS ADAPTADAS */
+        .stage-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            color: var(--neon-yellow);
+            margin: 20px 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stage-title::before, .stage-title::after {
+            content: ''; flex: 1; height: 1px; background: var(--neon-yellow); opacity: 0.5;
+        }
+
+        .task-card {
+            background: var(--bg-panel-1);
+            border: 2px solid var(--border-panel);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: all 0.2s ease;
+        }
+
+        .task-card.card-Pendiente { border-left: 5px solid var(--border-panel); }
+        .task-card.card-Gestionando { border-left: 5px solid var(--neon-yellow); }
+        .task-card.card-Revisar { border-left: 5px solid var(--neon-orange); }
+        .task-card.card-Urgente { border-left: 5px solid var(--neon-red); }
+
+        .card-top {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-move-mobile {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            border-color: #4a3f6b;
+            color: #8b85a1;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            background: #0d0a17;
+            border: 1.5px solid var(--border-panel);
+            color: #ffffff;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 9px 10px;
+            border-radius: 6px;
+            outline: none;
+        }
+        select:focus, input:focus, textarea:focus { border-color: var(--neon-pink); }
+        textarea { height: 70px; resize: none; }
+
+        .status-select {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+        .status-Pendiente { color: var(--text-dim); }
+        .status-Gestionando { color: var(--neon-yellow); }
+        .status-Revisar { color: var(--neon-orange); }
+        .status-Urgente { color: var(--neon-red); }
+        .status-Completada { color: var(--neon-green); }
+        .status-Garaje { color: var(--neon-purple); }
+
+        .time-stamp {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 7px;
+            color: var(--text-dim);
+            text-align: right;
+        }
+
+        .empty-slot {
+            font-size: 12px;
+            color: #554d73;
+            text-align: center;
+            padding: 8px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        /* GARAJE E HISTORIAL */
+        .garage-section {
+            margin-top: 30px;
+            background: rgba(13, 10, 23, 0.7);
+            border: 1.5px dashed var(--neon-purple);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .garage-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            color: var(--neon-purple);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .garage-card {
+            background: var(--bg-panel-2);
+            border-left: 3px solid var(--neon-purple);
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .btn-reactivate { font-size: 7px; padding: 6px 8px; border-color: var(--neon-cyan); color: var(--neon-cyan); }
+
+        /* BOTONES FLOTANTES */
+        .floating-container {
+            position: fixed;
+            bottom: 20px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1000;
+        }
+
+        .fab {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--bg-panel-1);
+            border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .fab-snake {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+        }
+
+        /* MODAL DEL JUEGO DE LA SERPIENTE */
+        .snake-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 999999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        .snake-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            color: var(--neon-green);
+            margin-bottom: 10px;
+        }
+        #snakeCanvas {
+            background: #0d0a17;
+            border: 3px solid var(--neon-green);
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
+        }
+        .snake-dpad {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: 50px 50px 50px;
+            grid-template-rows: 50px 50px;
+            gap: 8px;
+        }
+        .dpad-btn {
+            background: var(--bg-panel-1);
+            border: 2px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        .btn-close-snake {
+            margin-top: 15px;
+            border-color: var(--neon-pink);
+            color: var(--neon-pink);
+            padding: 8px 16px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="title-box">
+        <h1>ARCADE RIDER</h1>
+        <span>Pocket Edition</span>
+    </div>
+    <div class="score-pill">
+        <span id="player-lvl">LVL 1</span><br>
+        <span id="player-score" style="color: #fff;">0</span> XP
+    </div>
+</header>
+
+<div class="controls-mobile">
+    <button class="btn-save-local" onclick="exportarBackup()">📥 Respaldo</button>
+    <button class="btn-sync" onclick="descargarDeNube()">☁️ Cargar</button>
+</div>
+
+<div class="filter-row">
+    <span class="filter-label">ESTADO:</span>
+    <select class="filtro-select" id="filtroEstado" onchange="cambiarFiltro(this.value)">
+        <option value="TODAS">TODAS</option>
+        <option value="Urgente">URGENTES</option>
+        <option value="Revisar">REVISAR</option>
+        <option value="Gestionando">EN CURSO</option>
+        <option value="Pendiente">PENDIENTES</option>
+    </select>
+</div>
+
+<div class="stage-title">MISIONES EN RUTA</div>
+<div id="tasks-container"></div>
+
+<div class="garage-section" id="garage-wrapper" style="display: none;">
+    <div class="garage-title">» GARAJE (PAUSADAS) «</div>
+    <div id="garage-container"></div>
+</div>
+
+<!-- BOTONES FLOTANTES: NUBE + SERPIENTE -->
+<div class="floating-container">
+    <div class="fab fab-snake" onclick="abrirSnake()" title="Jugar a la Serpiente">🐍</div>
+    <div class="fab" id="btnFloatingCloud" onclick="subirANube()" title="Guardar en Sheets">☁️</div>
+</div>
+
+<!-- MODAL SNAKE -->
+<div class="snake-modal" id="snakeModal">
+    <div class="snake-title">POCKET SNAKE [ <span id="snakeScore">0</span> ]</div>
+    <canvas id="snakeCanvas" width="280" height="280"></canvas>
+    
+    <div class="snake-dpad">
+        <div></div>
+        <div class="dpad-btn" onclick="cambiarDirSnake('UP')">▲</div>
+        <div></div>
+        <div class="dpad-btn" onclick="cambiarDirSnake('LEFT')">◀</div>
+        <div class="dpad-btn" onclick="cambiarDirSnake('DOWN')">▼</div>
+        <div class="dpad-btn" onclick="cambiarDirSnake('RIGHT')">▶</div>
+    </div>
+
+    <button class="btn-close-snake" onclick="cerrarSnake()">CERRAR</button>
+</div>
+
+<script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxESABOgiX8FP1wwPFZC9FuV3gdhLjWuGnX61pGnnmGliCiGF3k3hdemRDG6Z_ZInhi/exec";
+
+    let pendientes = [];
+    let garaje = [];
+    let historial = [];
+    let score = 0;
+    let filtroActual = "TODAS";
+
+    function iniciar() {
+        try {
+            const lp = localStorage.getItem('arcade_pendientes');
+            const lg = localStorage.getItem('arcade_garaje');
+            const lh = localStorage.getItem('arcade_historial');
+            const ls = localStorage.getItem('arcade_score');
+
+            if (lp) pendientes = JSON.parse(lp);
+            if (lg) garaje = JSON.parse(lg);
+            if (lh) historial = JSON.parse(lh);
+            if (ls) score = parseInt(ls, 10) || 0;
+        } catch (e) {}
+
+        asegurarUnaFilaVacia();
+        actualizarScoreUI();
+        renderGaraje();
+    }
+
+    function guardarLocal() {
+        localStorage.setItem('arcade_pendientes', JSON.stringify(pendientes));
+        localStorage.setItem('arcade_garaje', JSON.stringify(garaje));
+        localStorage.setItem('arcade_historial', JSON.stringify(historial));
+        localStorage.setItem('arcade_score', score.toString());
+    }
+
+    function cambiarFiltro(val) {
+        filtroActual = val;
+        renderPendientes();
+    }
+
+    function asegurarUnaFilaVacia() {
+        pendientes = pendientes.filter(t => t.tipo !== "" || t.tareaDesc !== "" || t.cliNombre !== "");
+        pendientes.unshift({ tipo: "", tareaDesc: "", cliNombre: "", cliDni: "", cliTlf: "", cliNotas: "", estado: "Pendiente", fechaCreacion: "" });
+        renderPendientes();
+    }
+
+    function moverTarea(index, dir) {
+        if (dir === -1 && index > 1) {
+            [pendientes[index], pendientes[index - 1]] = [pendientes[index - 1], pendientes[index]];
+        } else if (dir === 1 && index < pendientes.length - 1) {
+            [pendientes[index], pendientes[index + 1]] = [pendientes[index + 1], pendientes[index]];
+        }
+        guardarLocal();
+        renderPendientes();
+    }
+
+    function renderPendientes() {
+        const container = document.getElementById('tasks-container');
+        if (!container) return;
+        container.innerHTML = "";
+
+        pendientes.forEach((task, index) => {
+            if (index !== 0 && filtroActual !== "TODAS" && task.estado !== filtroActual) {
+                return;
+            }
+
+            const card = document.createElement('div');
+            card.className = `task-card card-${task.estado}`;
+
+            // Fila Superior (Tipo y flechas)
+            const topRow = document.createElement('div');
+            topRow.className = 'card-top';
+
+            const selectTipo = document.createElement('select');
+            selectTipo.innerHTML = `
+                <option value="" ${task.tipo === '' ? 'selected' : ''}>[ + NUEVA MISIÓN ]</option>
+                <option value="Tarea" ${task.tipo === 'Tarea' ? 'selected' : ''}>TAREA INTERNA</option>
+                <option value="Gestión con Cliente" ${task.tipo === 'Gestión con Cliente' ? 'selected' : ''}>CLIENTE</option>
+            `;
+            selectTipo.onchange = (e) => cambiarCampo(index, 'tipo', e.target.value);
+            topRow.appendChild(selectTipo);
+
+            if (index !== 0) {
+                const btnUp = document.createElement('button');
+                btnUp.className = 'btn-move-mobile';
+                btnUp.innerText = '▲';
+                btnUp.disabled = (index === 1);
+                btnUp.onclick = () => moverTarea(index, -1);
+
+                const btnDown = document.createElement('button');
+                btnDown.className = 'btn-move-mobile';
+                btnDown.innerText = '▼';
+                btnDown.disabled = (index === pendientes.length - 1);
+                btnDown.onclick = () => moverTarea(index, 1);
+
+                topRow.appendChild(btnUp);
+                topRow.appendChild(btnDown);
+            }
+            card.appendChild(topRow);
+
+            // Cuerpo dinámico
+            const bodyDiv = document.createElement('div');
+            if (task.tipo === "Tarea") {
+                const inputTarea = document.createElement('input');
+                inputTarea.type = 'text';
+                inputTarea.placeholder = 'Descripción de la tarea...';
+                inputTarea.value = task.tareaDesc;
+                inputTarea.oninput = (e) => cambiarCampo(index, 'tareaDesc', e.target.value);
+                bodyDiv.appendChild(inputTarea);
+            } else if (task.tipo === "Gestión con Cliente") {
+                const nom = document.createElement('input');
+                nom.placeholder = 'Nombre del Cliente';
+                nom.value = task.cliNombre;
+                nom.style.marginBottom = '6px';
+                nom.oninput = (e) => cambiarCampo(index, 'cliNombre', e.target.value);
+
+                const tlf = document.createElement('input');
+                tlf.type = 'tel';
+                tlf.placeholder = 'Teléfono';
+                tlf.value = task.cliTlf;
+                tlf.style.marginBottom = '6px';
+                tlf.oninput = (e) => cambiarCampo(index, 'cliTlf', e.target.value);
+
+                const notas = document.createElement('textarea');
+                notas.placeholder = 'Notas de la gestión...';
+                notas.value = task.cliNotas;
+                notas.oninput = (e) => cambiarCampo(index, 'cliNotas', e.target.value);
+
+                bodyDiv.appendChild(nom);
+                bodyDiv.appendChild(tlf);
+                bodyDiv.appendChild(notas);
+            } else {
+                const empty = document.createElement('div');
+                empty.className = 'empty-slot';
+                empty.innerText = 'TOCA ARRIBA PARA EMPEZAR';
+                bodyDiv.appendChild(empty);
+            }
+            card.appendChild(bodyDiv);
+
+            // Selector de estado
+            if (task.tipo !== "") {
+                const selectEstado = document.createElement('select');
+                selectEstado.className = `status-select status-${task.estado}`;
+                selectEstado.innerHTML = `
+                    <option value="Pendiente" ${task.estado === 'Pendiente' ? 'selected' : ''}>PENDIENTE</option>
+                    <option value="Gestionando" ${task.estado === 'Gestionando' ? 'selected' : ''}>EN CURSO</option>
+                    <option value="Revisar" ${task.estado === 'Revisar' ? 'selected' : ''}>PARA REVISAR</option>
+                    <option value="Urgente" ${task.estado === 'Urgente' ? 'selected' : ''}>🔥 URGENTE</option>
+                    <option value="Garaje" ${task.estado === 'Garaje' ? 'selected' : ''}>AL GARAJE</option>
+                    <option value="Completada" ${task.estado === 'Completada' ? 'selected' : ''}>COMPLETADO</option>
+                `;
+                selectEstado.onchange = (e) => evaluarEstado(index, e.target.value);
+                card.appendChild(selectEstado);
+
+                if (task.fechaCreacion) {
+                    const time = document.createElement('div');
+                    time.className = 'time-stamp';
+                    time.innerText = `HORA: ${task.fechaCreacion}`;
+                    card.appendChild(time);
+                }
+            }
+
+            container.appendChild(card);
+        });
+    }
+
+    function cambiarCampo(index, campo, valor) {
+        pendientes[index][campo] = valor;
+        if (campo === 'tipo') {
+            pendientes[index].tareaDesc = "";
+            pendientes[index].cliNombre = "";
+            pendientes[index].cliDni = "";
+            pendientes[index].cliTlf = "";
+            pendientes[index].cliNotas = "";
+            pendientes[index].estado = "Pendiente";
+            if (valor !== "" && !pendientes[index].fechaCreacion) {
+                const d = new Date();
+                pendientes[index].fechaCreacion = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+            }
+            if (index === 0) asegurarUnaFilaVacia();
+        }
+        guardarLocal();
+    }
+
+    function evaluarEstado(index, nuevoEstado) {
+        const item = pendientes[index];
+        if (nuevoEstado === "Completada" && item.tipo !== "") {
+            score += 250;
+            actualizarScoreUI();
+            pendientes.splice(index, 1);
+            asegurarUnaFilaVacia();
+            guardarLocal();
+        } else if (nuevoEstado === "Garaje" && item.tipo !== "") {
+            const pausada = pendientes.splice(index, 1)[0];
+            pausada.estado = "Pendiente";
+            garaje.push(pausada);
+            asegurarUnaFilaVacia();
+            renderGaraje();
+            guardarLocal();
+        } else {
+            pendientes[index].estado = nuevoEstado;
+            renderPendientes();
+            guardarLocal();
+        }
+    }
+
+    function renderGaraje() {
+        const wrap = document.getElementById('garage-wrapper');
+        const cont = document.getElementById('garage-container');
+        if (!wrap || !cont) return;
+        cont.innerHTML = "";
+        if (garaje.length === 0) { wrap.style.display = 'none'; return; }
+        wrap.style.display = 'block';
+        garaje.forEach((t, i) => {
+            const c = document.createElement('div');
+            c.className = 'garage-card';
+            let label = t.tipo === "Tarea" ? t.tareaDesc : t.cliNombre;
+            c.innerHTML = `<div><strong>[${t.tipo}]</strong> ${label.substring(0, 30)}...</div>`;
+            const btn = document.createElement('button');
+            btn.className = 'btn-reactivate';
+            btn.innerText = 'ACTIVAR';
+            btn.onclick = () => {
+                const rec = garaje.splice(i, 1)[0];
+                pendientes.splice(1, 0, rec);
+                renderPendientes();
+                renderGaraje();
+                guardarLocal();
+            };
+            c.appendChild(btn);
+            cont.appendChild(c);
+        });
+    }
+
+    function actualizarScoreUI() {
+        document.getElementById('player-score').innerText = score;
+        document.getElementById('player-lvl').innerText = `LVL ${Math.floor(score / 1000) + 1}`;
+    }
+
+    function exportarBackup() {
+        const data = { pendientes, garaje, historial, score };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+        const a = document.createElement('a');
+        a.setAttribute("href", dataStr);
+        a.setAttribute("download", `Arcade_Pocket_${Date.now()}.json`);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    function subirANube() {
+        if (!GOOGLE_SCRIPT_URL || !GOOGLE_SCRIPT_URL.startsWith("https://script.google.com/")) {
+            alert("⚠️ URL de Google Apps Script no configurada.");
+            return;
+        }
+
+        // Filtra únicamente tareas reales
+        const tareasValidas = pendientes.filter(t => t.tipo !== "");
+        const garajeValido = garaje.filter(g => g.tipo !== "");
+
+        // Freno 1: Evita sobreescribir la nube si la lista del móvil está vacía
+        if (tareasValidas.length === 0 && garajeValido.length === 0) {
+            alert("⛔ BLOQUEO DE SEGURIDAD: Tu lista local está vacía.\nNo se ha enviado nada para proteger los datos de la nube.");
+            return;
+        }
+
+        // Freno 2: Confirmación antes de enviar
+        const confirmar = confirm(`Vas a guardar en la nube:\n• ${tareasValidas.length} tareas activas\n• ${garajeValido.length} en garaje\n\n¿Quieres actualizar Google Sheets?`);
+        if (!confirmar) return;
+
+        const btn = document.getElementById('btnFloatingCloud');
+        btn.innerText = "⏳";
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pendientes: tareasValidas, garaje: garajeValido })
+        }).then(() => {
+            btn.innerText = "☁️";
+            alert("✅ Guardado en Google Sheets correctamente");
+        }).catch(() => {
+            btn.innerText = "☁️";
+            alert("❌ Error de red al guardar");
+        });
+    }
+
+    // ==================== MINI JUEGO: SNAKE RETRO ====================
+    const canvas = document.getElementById('snakeCanvas');
+    const ctx = canvas.getContext('2d');
+    const gridSize = 14;
+    let snake = [{x: 7, y: 7}];
+    let food = {x: 12, y: 12};
+    let dx = 1, dy = 0;
+    let snakeGameInterval;
+    let snakeScore = 0;
+
+    function abrirSnake() {
+        document.getElementById('snakeModal').style.display = 'flex';
+        reiniciarSnake();
+    }
+
+    function cerrarSnake() {
+        clearInterval(snakeGameInterval);
+        document.getElementById('snakeModal').style.display = 'none';
+    }
+
+    function reiniciarSnake() {
+        snake = [{x: 7, y: 7}, {x: 6, y: 7}];
+        dx = 1; dy = 0;
+        snakeScore = 0;
+        document.getElementById('snakeScore').innerText = snakeScore;
+        colocarComida();
+        clearInterval(snakeGameInterval);
+        snakeGameInterval = setInterval(bucleSnake, 120);
+    }
+
+    function colocarComida() {
+        food.x = Math.floor(Math.random() * (canvas.width / gridSize));
+        food.y = Math.floor(Math.random() * (canvas.height / gridSize));
+    }
+
+    function cambiarDirSnake(dir) {
+        if (dir === 'UP' && dy === 0) { dx = 0; dy = -1; }
+        if (dir === 'DOWN' && dy === 0) { dx = 0; dy = 1; }
+        if (dir === 'LEFT' && dx === 0) { dx = -1; dy = 0; }
+        if (dir === 'RIGHT' && dx === 0) { dx = 1; dy = 0; }
+    }
+
+    function bucleSnake() {
+        const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+        // Choque bordes (atravesar pantalla estilo clásico)
+        const cols = canvas.width / gridSize;
+        const rows = canvas.height / gridSize;
+        if (head.x < 0) head.x = cols - 1;
+        if (head.x >= cols) head.x = 0;
+        if (head.y < 0) head.y = rows - 1;
+        if (head.y >= rows) head.y = 0;
+
+        // Auto-colisión
+        for (let seg of snake) {
+            if (seg.x === head.x && seg.y === head.y) {
+                reiniciarSnake();
+                return;
+            }
+        }
+
+        snake.unshift(head);
+
+        // Comer
+        if (head.x === food.x && head.y === food.y) {
+            snakeScore += 10;
+            document.getElementById('snakeScore').innerText = snakeScore;
+            score += 50; // ¡Ganas XP reales para la app!
+            actualizarScoreUI();
+            guardarLocal();
+            colocarComida();
+        } else {
+            snake.pop();
+        }
+
+        // Renderizado
+        ctx.fillStyle = "#0d0a17";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Manzana
+        ctx.fillStyle = "#ff007f";
+        ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
+
+        // Serpiente
+        ctx.fillStyle = "#00ff66";
+        snake.forEach((seg, i) => {
+            if (i === 0) ctx.fillStyle = "#00f3ff"; // Cabeza
+            else ctx.fillStyle = "#00ff66";
+            ctx.fillRect(seg.x * gridSize, seg.y * gridSize, gridSize - 1, gridSize - 1);
+        });
+    }
+
+    window.onload = iniciar;
+</script>
+</body>
+</html>
