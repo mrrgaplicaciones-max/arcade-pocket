@@ -380,7 +380,7 @@ async function migrarLegacyVault(legacyVault){
 }
 async function configurarPIN(){
     const pin=pinBuffer;
-    if(!/^\\d{6}$/.test(pin)){
+    if(!/^\d{6}$/.test(pin)){
         mostrarErrorPIN("Usa exactamente 6 dígitos.");
         return;
     }
@@ -435,7 +435,7 @@ async function validarPin(){
         mostrarConfiguracionInicial();
         return;
     }
-    if(!/^\\d{6}$/.test(pin)){
+    if(!/^\d{6}$/.test(pin)){
         mostrarErrorPIN("Introduce los 6 dígitos.");
         return;
     }
