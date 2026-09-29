@@ -68,6 +68,12 @@ header{
 .btn-up{border-color:rgba(36,255,122,.55);color:var(--green)}
 .btn-new{border-color:rgba(255,234,0,.55);color:var(--yellow)}
 .btn-exp{border-color:rgba(255,63,159,.55);color:var(--pink)}
+.btn-down,.btn-up{position:relative}
+.btn-down::after,.btn-up::after{
+    content:"2 PASOS";display:block;font-size:7px;opacity:.45;margin-top:2px;letter-spacing:.5px
+}
+.act-btn:disabled{cursor:not-allowed;filter:grayscale(.35);box-shadow:none}
+
 
 /* Search */
 .search-box{position:sticky;top:calc(60px + var(--safe-top));z-index:40;margin-bottom:12px;padding:4px 0;background:linear-gradient(180deg,rgba(7,5,13,.98),rgba(7,5,13,.88),transparent)}
@@ -267,7 +273,8 @@ header{
         <button class="cancel-new" onclick="toggleFormNuevo()">CANCELAR</button>
     </div>
 </div>
-<div class="vault-list id="vaultList"></div>
+<!-- Lista de credenciales: el id debe coincidir con renderLista() -->
+<div class="vault-list" id="vaultList"></div>
 
 <script>
 const GOOGLE_SCRIPT_URL="https://script.google.com/macros/s/AKfycbzr27kS6ZtDX3GSqjWRUTGxF1Uecp1x96yVAaPmPB4h2ogTRRcBdcR31IcUG0ZI3CNu/exec";
@@ -591,52 +598,107 @@ async function guardarNuevaClave(){
 }
 function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]))}
 async function renderLista(){
-    const cont=document.getElementById("vaultList");if(!cont)return;cont.innerHTML="";
-    if(vault.length===0){
-        actualizarContador(0);cont.innerHTML='<div class="empty-state"><span class="empty-icon">🗝️</span><strong>LLAVERO VACÍO</strong><br>Pulsa <b>BAJAR</b> para traer tus claves de Google Sheets.</div>';return;
+    const cont=document.getElementById("vaultList");
+    if(!cont)return;
+    cont.innerHTML="";
+    actualizarContador(Array.isArray(vault)?vault.length:0);
+
+    if(!Array.isArray(vault)||vault.length===0){
+        cont.innerHTML='<div class="empty-state"><span class="empty-icon">🗝️</span><strong>LLAVERO VACÍO</strong><br>Pulsa <b>BAJAR</b> para traer tus claves de Google Sheets.</div>';
+        return;
     }
+
     const filtradas=vault.filter(k=>{
-        if(!filtroTexto)return true;const s=String(k.servicio||"").toLowerCase(),u=String(k.usuario||"").toLowerCase();
-        return s.includes(filtroTexto)||u.includes(filtroTexto)
+        if(!filtroTexto)return true;
+        const s=String(k?.servicio||"").toLowerCase();
+        const u=String(k?.usuario||"").toLowerCase();
+        return s.includes(filtroTexto)||u.includes(filtroTexto);
     });
-    filtradas.sort((a,b)=>String(a.servicio||"").localeCompare(String(b.servicio||""),"es",{sensitivity:"base"}));
+
+    filtradas.sort((a,b)=>String(a?.servicio||"").localeCompare(String(b?.servicio||""),"es",{sensitivity:"base"}));
     actualizarContador(filtradas.length);
+
     if(!filtradas.length){
-        cont.innerHTML=`<div class="empty-state"><span class="empty-icon">🔎</span>No se encontraron resultados para<br><strong>"${escapeHTML(filtroTexto)}"</strong></div>`;return;
+        cont.innerHTML=`<div class="empty-state"><span class="empty-icon">🔎</span>No se encontraron resultados para<br><strong>"${escapeHTML(filtroTexto)}"</strong></div>`;
+        return;
     }
+
     for(const k of filtradas){
-        const idx=vault.indexOf(k),tipo=k.tipo==="Particular"?"particular":"comun",
-              usuario=k.usuario||"",servicio=k.servicio||"Sin nombre",card=document.createElement("div");
-        let passReal="";
-        try{passReal=await descifrarClave(k)}catch(e){passReal="";}
+        const idx=vault.indexOf(k);
+        const tipo=k?.tipo==="Particular"?"particular":"comun";
+        const usuario=String(k?.usuario||"");
+        const servicio=String(k?.servicio||"Sin nombre");
+        const card=document.createElement("div");
+
         card.className=`cred-card ${tipo}`;
         card.innerHTML=`
-            <div class="cred-top"><span class="cred-service" title="${escapeHTML(servicio)}">${escapeHTML(servicio)}</span>
-            <span class="cred-badge badge-${tipo}">${escapeHTML(k.tipo||"Común")}</span></div>
-            <div class="cred-row"><span class="cred-val" title="${escapeHTML(usuario)}">${usuario?escapeHTML(usuario):'<span style="color:#665f73;">Sin usuario</span>'}</span>
-            <button class="btn-touch-copy" aria-label="Copiar usuario">📋</button></div>
-            <div class="cred-row"><span class="cred-val pass-value">••••••••</span>
-            <div class="pass-actions"><button class="btn-touch-copy pass-toggle" aria-label="Mostrar contraseña">👁️</button>
-            <button class="btn-touch-copy pass-copy" aria-label="Copiar contraseña">🔑</button></div></div>
-            <div class="cred-footer"><span>Modif. ${escapeHTML(k.fechaModif||"-")}</span><button class="delete-btn">BORRAR</button></div>`;
-        card.querySelector(".btn-touch-copy").addEventListener("click",()=>copiar(usuario,"USUARIO"));
-        const passValue=card.querySelector(".pass-value"),passToggle=card.querySelector(".pass-toggle"),passCopy=card.querySelector(".pass-copy");
+            <div class="cred-top">
+                <span class="cred-service" title="${escapeHTML(servicio)}">${escapeHTML(servicio)}</span>
+                <span class="cred-badge badge-${tipo}">${escapeHTML(k?.tipo||"Común")}</span>
+            </div>
+            <div class="cred-row">
+                <span class="cred-val" title="${escapeHTML(usuario)}">${usuario?escapeHTML(usuario):'<span style="color:#665f73;">Sin usuario</span>'}</span>
+                <button class="btn-touch-copy user-copy" aria-label="Copiar usuario">📋</button>
+            </div>
+            <div class="cred-row">
+                <span class="cred-val pass-value">••••••••</span>
+                <div class="pass-actions">
+                    <button class="btn-touch-copy pass-toggle" aria-label="Mostrar contraseña">👁️</button>
+                    <button class="btn-touch-copy pass-copy" aria-label="Copiar contraseña">🔑</button>
+                </div>
+            </div>
+            <div class="cred-footer">
+                <span>Modif. ${escapeHTML(String(k?.fechaModif||"-"))}</span>
+                <button class="delete-btn">BORRAR</button>
+            </div>`;
+
+        card.querySelector(".user-copy").addEventListener("click",()=>copiar(usuario,"USUARIO"));
+
+        const passValue=card.querySelector(".pass-value");
+        const passToggle=card.querySelector(".pass-toggle");
+        const passCopy=card.querySelector(".pass-copy");
         let revealTimer=null;
-        passToggle.addEventListener("click",()=>{
-            const visible=passValue.dataset.visible==="1";if(revealTimer)clearTimeout(revealTimer);
-            if(visible){passValue.innerText="••••••••";passValue.dataset.visible="0";passToggle.innerText="👁️"}
-            else{
-                passValue.innerText=passReal||"(vacía)";passValue.dataset.visible="1";passToggle.innerText="🙈";
-                revealTimer=setTimeout(()=>{passValue.innerText="••••••••";passValue.dataset.visible="0";passToggle.innerText="👁️"},10000)
+
+        const obtenerPassword=async()=>{
+            try{
+                if(!esRegistroCifrado(k))throw new Error("Esta credencial no está cifrada.");
+                return await descifrarClave(k);
+            }catch(e){
+                console.error("No se pudo descifrar la credencial",e);
+                lanzarToast("⚠️ NO SE PUEDE DESCIFRAR");
+                return null;
             }
+        };
+
+        passToggle.addEventListener("click",async()=>{
+            if(revealTimer)clearTimeout(revealTimer);
+            const visible=passValue.dataset.visible==="1";
+            if(visible){
+                passValue.innerText="••••••••";
+                passValue.dataset.visible="0";
+                passToggle.innerText="👁️";
+                return;
+            }
+            const pass=await obtenerPassword();
+            if(pass===null)return;
+            passValue.innerText=pass||"(vacía)";
+            passValue.dataset.visible="1";
+            passToggle.innerText="🙈";
+            revealTimer=setTimeout(()=>{
+                passValue.innerText="••••••••";
+                passValue.dataset.visible="0";
+                passToggle.innerText="👁️";
+            },10000);
         });
-        passCopy.addEventListener("click",()=>copiar(passReal,"PASSWORD"));
-        card.querySelector(".delete-btn").addEventListener("click",()=>borrarClave(idx));cont.appendChild(card);
+
+        passCopy.addEventListener("click",async()=>{
+            const pass=await obtenerPassword();
+            if(pass!==null)copiar(pass,"PASSWORD");
+        });
+
+        card.querySelector(".delete-btn").addEventListener("click",()=>borrarClave(idx));
+        cont.appendChild(card);
     }
-}
-function actualizarContador(total){
-    const el=document.getElementById("listCount"),status=document.getElementById("listStatus");
-    if(el)el.innerText=`${total} ${total===1?"clave":"claves"}`;if(status)status.innerText=filtroTexto?"filtrado":"local";
 }
 async function copiar(txt,tipoLabel){
     if(!txt){lanzarToast("NO HAY NADA QUE COPIAR");return}
@@ -655,27 +717,88 @@ async function borrarClave(idx){
     if(idx<0||idx>=vault.length)return;const nombre=vault[idx].servicio||"esta credencial";
     if(confirm(`¿Eliminar "${nombre}" del llavero?`)){vault.splice(idx,1);await guardarLocal();await renderLista();lanzarToast("✓ CLAVE ELIMINADA")}
 }
+function normalizarVaultRemoto(raw){
+    if(Array.isArray(raw))return raw;
+    if(raw&&typeof raw==="object"){
+        if(Array.isArray(raw.vault))return raw.vault;
+        if(Array.isArray(raw.data))return raw.data;
+        if(raw.vault&&typeof raw.vault==="string")return normalizarVaultRemoto(raw.vault);
+        if(raw.data&&typeof raw.data==="string")return normalizarVaultRemoto(raw.data);
+    }
+    if(typeof raw==="string"){
+        try{
+            const parsed=JSON.parse(raw);
+            return normalizarVaultRemoto(parsed);
+        }catch(e){}
+    }
+    return [];
+}
+function validarRegistrosRemotos(items){
+    if(!Array.isArray(items))throw new Error("Google Sheets no devolvió una lista válida.");
+    for(const k of items){
+        if(!k||typeof k!=="object")throw new Error("Se encontró una credencial con formato inválido.");
+        if(typeof k.servicio!=="string")throw new Error("Se encontró una credencial sin servicio válido.");
+    }
+}
+async function verificarVaultCifrado(items){
+    if(!Array.isArray(items))throw new Error("Vault inválido.");
+    for(const k of items){
+        if(!esRegistroCifrado(k))throw new Error("La migración no generó un registro cifrado válido.");
+        // Verify that AES-GCM can actually decrypt every migrated password.
+        await descifrarClave(k);
+    }
+    return true;
+}
 async function descargarNube(){
     if(!GOOGLE_SCRIPT_URL||busy)return;
     if(!cryptoKey){lanzarToast("DESBLOQUEA EL VAULT");return}
-    if(!confirm("¿Descargar las claves desde Google Sheets?"))return;
-    setBusy(true,"DESCARGANDO…");
+
+    const hayLocal=vault.length>0;
+    const mensaje=hayLocal
+        ? `⚠️ BAJAR VA A REEMPLAZAR EL LLAVERO LOCAL.\n\nAhora tienes ${vault.length} ${vault.length===1?"clave":"claves"} en este dispositivo.\n\nSe descargarán las claves guardadas en Google Sheets y sustituirán las locales.\n\n¿Continuar?`
+        : `☁️ BAJAR CLAVES\n\nSe traerán las credenciales guardadas en Google Sheets al dispositivo.\n\n¿Continuar?`;
+    if(!confirm(mensaje))return;
+
+    setBusy(true,"BAJANDO…");
     try{
         const res=await fetch(GOOGLE_SCRIPT_URL+"?action=getVault",{method:"GET",redirect:"follow",cache:"no-store"});
+        if(!res.ok)throw new Error(`Google Sheets respondió con HTTP ${res.status}.`);
         const data=await res.json();
-        if(data.status!=="success")throw new Error(data.message||"Respuesta no válida");
+        if(data.status!=="success")throw new Error(data.message||"Respuesta no válida de Google Sheets.");
 
-        const remote=Array.isArray(data.vault)?data.vault:[];
+        const remote=normalizarVaultRemoto(data.vault ?? data.data ?? data);
+        if(!remote.length && data.status==="success"){
+            console.warn("Respuesta Google Sheets sin registros reconocibles:",data);
+        }
+        validarRegistrosRemotos(remote);
 
-        // First secure import: transparently convert the old base64 format
-        // into AES-GCM ciphertext before it is written locally/cloud.
+        if(remote.length===0){
+            lanzarToast("⚠️ GOOGLE SHEETS ESTÁ VACÍO");
+            return;
+        }
+
+        let candidate;
+        let migrated=false;
+
         if(remote.some(k=>!esRegistroCifrado(k))){
-            vault=await migrarLegacyVault(remote);
-            await guardarLocal();
-            await renderLista();
+            candidate=await migrarLegacyVault(remote);
+            await verificarVaultCifrado(candidate);
+            migrated=true;
+        }else{
+            candidate=remote;
+            await verificarVaultCifrado(candidate);
+        }
 
-            // Persist the migrated ciphertext to Google Sheets so the old
-            // obfuscated copy is replaced by authenticated encryption.
+        // Only replace the current local vault after the complete import
+        // and decryption test succeeds.
+        vault=candidate;
+        await guardarLocal();
+        await renderLista();
+        if(!Array.isArray(vault)||vault.length===0)throw new Error("La descarga no dejó ninguna credencial en memoria.");
+
+        if(migrated){
+            // Best effort: replace legacy cloud data with encrypted records.
+            // The no-cors request cannot prove server-side success.
             try{
                 await fetch(GOOGLE_SCRIPT_URL,{
                     method:"POST",mode:"no-cors",
@@ -683,35 +806,72 @@ async function descargarNube(){
                     body:JSON.stringify({action:"saveVault",vault})
                 });
             }catch(e){
-                console.warn("La migración local fue correcta; no se pudo confirmar la subida.",e);
+                console.warn("Migración local correcta; no se pudo enviar la copia cifrada.",e);
             }
-            lanzarToast(`✓ ${vault.length} CLAVES MIGRADAS A AES-256`);
+            lanzarToast(`✓ ${vault.length} CLAVES MIGRADAS Y CARGADAS`);
         }else{
-            vault=remote;
-            await guardarLocal();
-            await renderLista();
             lanzarToast(`✓ ${vault.length} CLAVES DESCARGADAS`);
         }
-    }catch(err){alert("No se pudieron descargar las claves.\n\n"+err.message)}
-    finally{setBusy(false)}
+    }catch(err){
+        console.error("Error al descargar/migrar vault:",err);
+        alert("❌ NO SE HA CAMBIADO EL LLAVERO\n\n"+(err.message||"Error desconocido.")+
+              "\n\nTus claves locales anteriores siguen intactas.");
+    }finally{
+        setBusy(false);
+    }
 }
 async function subirNube(){
     if(!GOOGLE_SCRIPT_URL||busy)return;
     if(!cryptoKey){lanzarToast("DESBLOQUEA EL VAULT");return}
     if(!vault.length){lanzarToast("EL LLAVERO ESTÁ VACÍO");return}
-    if(vault.some(k=>!esRegistroCifrado(k))){alert("Hay una credencial antigua sin cifrar. No se puede subir el vault hasta convertirla a formato seguro.");return}
-    if(!confirm(`¿Subir ${vault.length} claves cifradas a Google Sheets?`))return;
-    setBusy(true,"GUARDANDO…");
+    if(vault.some(k=>!esRegistroCifrado(k))){
+        alert("Hay una credencial antigua sin cifrar. No se puede subir el vault hasta convertirla a formato seguro.");
+        return;
+    }
+
+    const mensaje=`⚠️ SUBIR VA A REEMPLAZAR EL VAULT DE GOOGLE SHEETS.\n\nSe enviarán ${vault.length} ${vault.length===1?"clave":"claves"} cifradas desde este dispositivo.\n\nLo que exista actualmente en Google Sheets será sustituido por esta copia.\n\n¿ESTÁS SEGURO?`;
+    if(!confirm(mensaje))return;
+
+    setBusy(true,"SUBIENDO…");
     try{
-        await fetch(GOOGLE_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"saveVault",vault})});
-        lanzarToast("✓ VAULT CIFRADO GUARDADO");
-    }catch(err){alert("No se pudo guardar en Google Sheets.\n\n"+err.message)}
-    finally{setBusy(false)}
+        // Validate locally before sending anything.
+        await verificarVaultCifrado(vault);
+        await fetch(GOOGLE_SCRIPT_URL,{
+            method:"POST",mode:"no-cors",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:"saveVault",vault})
+        });
+        lanzarToast("✓ VAULT CIFRADO ENVIADO");
+    }catch(err){
+        console.error("Error al subir vault:",err);
+        alert("❌ NO SE HA SUBIDO EL VAULT\n\n"+(err.message||"Error desconocido."));
+    }finally{
+        setBusy(false);
+    }
 }
 function setBusy(state,label=""){
-    busy=state;const down=document.getElementById("btnDownload"),up=document.getElementById("btnUpload");
-    if(down){down.disabled=state;down.style.opacity=state?".55":"1";if(state&&label)down.dataset.original=down.innerText;down.innerText=state?(label||"…"):(down.dataset.original||"☁️ BAJAR")}
-    if(up){up.disabled=state;up.style.opacity=state?".55":"1"}
+    busy=state;
+    const down=document.getElementById("btnDownload"),up=document.getElementById("btnUpload");
+    if(down){
+        down.disabled=state;
+        down.style.opacity=state?".55":"1";
+        if(state){
+            if(!down.dataset.original)down.dataset.original=down.innerText;
+            down.innerText=label||"…";
+        }else{
+            down.innerText=down.dataset.original||"☁️ BAJAR";
+        }
+    }
+    if(up){
+        up.disabled=state;
+        up.style.opacity=state?".55":"1";
+        if(state){
+            if(!up.dataset.original)up.dataset.original=up.innerText;
+            up.innerText=label||"…";
+        }else{
+            up.innerText=up.dataset.original||"☁️ SUBIR";
+        }
+    }
 }
 async function exportarComunes(){
     const comunes=vault.filter(k=>k.tipo==="Común");
