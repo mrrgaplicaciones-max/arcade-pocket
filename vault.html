@@ -419,7 +419,6 @@
                    (k.usuario && k.usuario.toLowerCase().includes(filtroTexto));
         });
 
-        // Ordenación alfabética A-Z por servicio
         filtradas.sort((a, b) => a.servicio.localeCompare(b.servicio, 'es', { sensitivity: 'base' }));
 
         if (filtradas.length === 0) {
@@ -522,23 +521,42 @@
         }).then(() => lanzarToast("GUARDADO EN SHEETS"));
     }
 
-    function exportarComunes() {
+    async function exportarComunes() {
         const comunes = vault.filter(k => k.tipo === "Común");
-        if (comunes.length === 0) { alert("No hay claves marcadas como 'Común'."); return; }
+        if (comunes.length === 0) { 
+            alert("No hay claves marcadas como 'Común'."); 
+            return; 
+        }
 
-        let txt = "=== CREDENCIALES COMUNES ===\n\n";
+        let msg = "🔐 *CREDENCIALES COMUNES TIENDA*\n\n";
         comunes.forEach(k => {
             let pass = "";
-            try { pass = decodeURIComponent(atob(k.passwordCifrada)); } catch(e) { pass = k.passwordCifrada; }
-            txt += `${k.servicio.toUpperCase()}\nUser: ${k.usuario || '-'}\nPass: ${pass}\nFecha: ${k.fechaModif}\n--------------------\n`;
+            try { 
+                pass = decodeURIComponent(atob(k.passwordCifrada)); 
+            } catch(e) { 
+                pass = k.passwordCifrada; 
+            }
+            msg += `🖥️ *${k.servicio.toUpperCase()}*\n`;
+            msg += `👤 Usuario: \`${k.usuario || '-'}\`\n`;
+            msg += `🔑 Clave: \`${pass}\`\n`;
+            msg += `───────────────\n`;
         });
 
-        const a = document.createElement('a');
-        a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(txt);
-        a.download = `Claves_Comunes_${Date.now()}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Claves Comunes',
+                    text: msg
+                });
+                return;
+            } catch (err) {}
+        }
+
+        navigator.clipboard.writeText(msg).then(() => {
+            lanzarToast("LISTA COPIADA");
+        }).catch(() => {
+            alert("Copia el texto manualmente:\n\n" + msg);
+        });
     }
 
     window.onload = iniciar;
