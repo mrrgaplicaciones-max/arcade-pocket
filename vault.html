@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#090614">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>CYBER VAULT</title>
+    
+    <!-- Icono integrado para el escritorio móvil -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23151125'/><circle cx='50' cy='50' r='38' fill='none' stroke='%23ffea00' stroke-width='4'/><text x='50' y='64' font-size='40' text-anchor='middle'>🔑</text></svg>">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #07040f;
+            --bg-card: rgba(21, 17, 37, 0.95);
+            --bg-input: #0d0a17;
+            --neon-pink: #ff007f;
+            --neon-cyan: #00f3ff;
+            --neon-yellow: #ffea00;
+            --neon-green: #00ff66;
+            --neon-red: #ff3333;
+            --text-main: #ffffff;
+            --text-dim: #8b85a1;
+            --border-panel: #2a2245;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: var(--bg-dark); 
+            background-image: radial-gradient(circle at 50% 10%, #1a0f2e 0%, transparent 60%);
+            color: var(--text-main); 
+            font-family: 'Nunito', sans-serif; 
+            padding: 12px 14px 60px 14px; 
+            min-height: 100vh;
+        }
+
+        /* HEADER POCKET */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--neon-yellow);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .header-title-box { display: flex; align-items: center; gap: 8px; }
+        .header-icon { font-size: 20px; filter: drop-shadow(0 0 8px var(--neon-yellow)); }
+        .header-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 11px;
+            color: var(--neon-yellow);
+            letter-spacing: 1px;
+        }
+        .header-sub { font-size: 10px; color: var(--text-dim); font-weight: 800; }
+
+        .btn-lock-top {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            padding: 8px 10px;
+            border: 1.5px solid var(--neon-red);
+            color: var(--neon-red);
+            background: #151125;
+            border-radius: 6px;
+            box-shadow: 2px 2px 0 var(--neon-red);
+        }
+
+        /* BARRA DE ACCIONES TÁCTILES */
+        .actions-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .act-btn {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 7px;
+            padding: 10px 4px;
+            background: var(--bg-card);
+            color: var(--text-main);
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            text-transform: uppercase;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.6);
+            transition: transform 0.1s;
+        }
+        .act-btn:active { transform: translate(1px, 1px); box-shadow: none; }
+        .btn-down { border: 1.5px solid var(--neon-cyan); color: var(--neon-cyan); }
+        .btn-up { border: 1.5px solid var(--neon-green); color: var(--neon-green); }
+        .btn-new { border: 1.5px solid var(--neon-yellow); color: var(--neon-yellow); }
+        .btn-exp { border: 1.5px solid var(--neon-pink); color: var(--neon-pink); }
+
+        /* BUSCADOR */
+        .search-box { margin-bottom: 14px; position: relative; }
+        .search-box input {
+            width: 100%;
+            background: #110c22;
+            border: 1.5px solid var(--border-panel);
+            color: #fff;
+            font-family: 'Nunito', sans-serif;
+            font-size: 14px;
+            font-weight: 800;
+            padding: 10px 14px;
+            border-radius: 8px;
+            outline: none;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+        }
+        .search-box input:focus { border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0,243,255,0.25); }
+
+        /* FORMULARIO NUEVA CLAVE */
+        .new-card-form {
+            display: none;
+            background: #151125;
+            border: 2px dashed var(--neon-yellow);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 16px;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .new-card-form input, .new-card-form select {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-panel);
+            color: #fff;
+            font-family: 'Nunito', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 9px 12px;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        /* TARJETAS DE CREDENCIALES */
+        .vault-list { display: flex; flex-direction: column; gap: 12px; }
+        
+        .cred-card {
+            background: var(--bg-card);
+            border: 1.5px solid var(--border-panel);
+            border-left: 5px solid var(--neon-cyan);
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+        }
+        .cred-card.comun { border-left-color: var(--neon-cyan); }
+        .cred-card.particular { border-left-color: var(--neon-pink); }
+
+        .cred-top { display: flex; justify-content: space-between; align-items: center; }
+        .cred-service { font-family: 'Press Start 2P', cursive; font-size: 10px; color: #fff; }
+        .cred-badge {
+            font-size: 8px; font-weight: 900; padding: 3px 7px;
+            border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .badge-comun { background: rgba(0, 243, 255, 0.15); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); }
+        .badge-particular { background: rgba(255, 0, 127, 0.15); color: var(--neon-pink); border: 1px solid var(--neon-pink); }
+
+        .cred-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0d091b;
+            padding: 8px 10px;
+            border-radius: 6px;
+            gap: 8px;
+            border: 1px solid #1f1738;
+        }
+        .cred-val {
+            font-size: 14px;
+            font-weight: 800;
+            color: #f1f5f9;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .btn-touch-copy {
+            background: #1c1533;
+            border: 1px solid var(--border-panel);
+            border-radius: 5px;
+            color: var(--text-main);
+            padding: 6px 10px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+        .btn-touch-copy:active { background: var(--neon-cyan); color: #000; }
+
+        .cred-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* TOAST FLOTANTE DE CONFIRMACIÓN */
+        #copyToast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--neon-yellow);
+            color: #090614;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            padding: 10px 18px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(255, 234, 0, 0.4);
+            z-index: 100000;
+            opacity: 0;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        #copyToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        /* PANTALLA BLOQUEO / KEYPAD ARCADE */
+        .auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #090614; z-index: 99999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px;
+        }
+        .auth-box {
+            background: #151125; border: 2px solid var(--neon-yellow);
+            border-radius: 10px; padding: 24px; width: 100%; max-width: 320px; text-align: center;
+            box-shadow: 0 0 30px rgba(255,234,0,0.25);
+        }
+        .pin-screen-val {
+            font-family: 'Press Start 2P', cursive; font-size: 22px; color: var(--neon-yellow);
+            background: #07040f; padding: 14px; border-radius: 6px; border: 1.5px solid var(--border-panel);
+            margin: 14px 0; letter-spacing: 8px;
+        }
+        .keypad-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;
+        }
+        .key-btn {
+            font-family: 'Press Start 2P', cursive; font-size: 15px; padding: 14px 0;
+            background: #1c1533; border: 1.5px solid var(--border-panel); color: #fff;
+            border-radius: 6px; cursor: pointer;
+        }
+        .key-btn:active { background: var(--neon-pink); }
+    </style>
+</head>
+<body>
+
+<!-- PANTALLA DE ACCESO POR PIN -->
+<div class="auth-overlay" id="authScreen">
+    <div class="auth-box">
+        <div style="font-family:'Press Start 2P'; font-size:10px; color:var(--neon-yellow);">🔒 ACCESO RESTRINGIDO</div>
+        <div class="pin-screen-val" id="pinDisplay">----</div>
+        <div class="keypad-grid">
+            <button class="key-btn" onclick="tocarPin('1')">1</button>
+            <button class="key-btn" onclick="tocarPin('2')">2</button>
+            <button class="key-btn" onclick="tocarPin('3')">3</button>
+            <button class="key-btn" onclick="tocarPin('4')">4</button>
+            <button class="key-btn" onclick="tocarPin('5')">5</button>
+            <button class="key-btn" onclick="tocarPin('6')">6</button>
+            <button class="key-btn" onclick="tocarPin('7')">7</button>
+            <button class="key-btn" onclick="tocarPin('8')">8</button>
+            <button class="key-btn" onclick="tocarPin('9')">9</button>
+            <button class="key-btn" onclick="borrarPin()" style="color:var(--neon-red); font-size:10px;">DEL</button>
+            <button class="key-btn" onclick="tocarPin('0')">0</button>
+            <button class="key-btn" onclick="validarPin()" style="color:var(--neon-green); font-size:10px;">OK</button>
+        </div>
+        <div id="pinError" style="color:var(--neon-red); font-size:10px; margin-top:12px; display:none;">PIN INCORRECTO</div>
+    </div>
+</div>
+
+<!-- TOAST FLOTANTE COPIADO -->
+<div id="copyToast">COPIADO AL PORTAPAPELES</div>
+
+<header>
+    <div class="header-title-box">
+        <span class="header-icon">🔑</span>
+        <div>
+            <div class="header-title">VAULT POCKET</div>
+            <div class="header-sub">Gestor Móvil de Claves</div>
+        </div>
+    </div>
+    <button class="btn-lock-top" onclick="bloquearApp()">BLOQUEAR</button>
+</header>
+
+<div class="actions-bar">
+    <button class="act-btn btn-down" onclick="descargarNube()">☁️ BAJAR</button>
+    <button class="act-btn btn-up" onclick="subirNube()">☁️ SUBIR</button>
+    <button class="act-btn btn-new" onclick="toggleFormNuevo()">+ NUEVA</button>
+    <button class="act-btn btn-exp" onclick="exportarComunes()">📄 COMÚN</button>
+</div>
+
+<div class="search-box">
+    <input type="text" id="searchInput" placeholder="🔍 Buscar servicio (ej. Hermes, SARA)..." oninput="filtrar(this.value)">
+</div>
+
+<!-- FORMULARIO NUEVA CREDENCIAL -->
+<div class="new-card-form" id="newCardForm">
+    <input type="text" id="newServicio" placeholder="Servicio (ej. Portal, Correo)">
+    <input type="text" id="newUsuario" placeholder="Usuario">
+    <input type="text" id="newPass" placeholder="Contraseña">
+    <select id="newTipo">
+        <option value="Común">Común</option>
+        <option value="Particular">Particular</option>
+    </select>
+    <div style="display:flex; gap:8px; margin-top:4px;">
+        <button onclick="guardarNuevaClave()" style="flex:1; border:1.5px solid var(--neon-green); color:var(--neon-green); padding:10px;">GUARDAR</button>
+        <button onclick="toggleFormNuevo()" style="border:1.5px solid var(--neon-red); color:var(--neon-red); padding:10px;">CANCELAR</button>
+    </div>
+</div>
+
+<div class="vault-list" id="vaultList"></div>
+
+<script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzr27kS6ZtDX3GSqjWRUTGxF1Uecp1x96yVAaPmPB4h2ogTRRcBdcR31IcUG0ZI3CNu/exec";
+    const PIN_MAESTRO = "1981";
+
+    let vault = [];
+    let filtroTexto = "";
+    let pinBuffer = "";
+
+    function iniciar() {
+        try {
+            const lv = localStorage.getItem('arcade_vault');
+            if (lv) vault = JSON.parse(lv);
+        } catch (e) {}
+    }
+
+    function tocarPin(n) {
+        if (pinBuffer.length < 6) {
+            pinBuffer += n;
+            document.getElementById('pinDisplay').innerText = "*".repeat(pinBuffer.length);
+        }
+    }
+
+    function borrarPin() {
+        pinBuffer = "";
+        document.getElementById('pinDisplay').innerText = "----";
+        document.getElementById('pinError').style.display = 'none';
+    }
+
+    function validarPin() {
+        if (pinBuffer === PIN_MAESTRO) {
+            document.getElementById('authScreen').style.display = 'none';
+            borrarPin();
+            renderLista();
+        } else {
+            document.getElementById('pinError').style.display = 'block';
+            document.getElementById('pinDisplay').innerText = "ERROR";
+            setTimeout(borrarPin, 700);
+        }
+    }
+
+    function bloquearApp() {
+        document.getElementById('authScreen').style.display = 'flex';
+        borrarPin();
+    }
+
+    function guardarLocal() {
+        localStorage.setItem('arcade_vault', JSON.stringify(vault));
+    }
+
+    function filtrar(val) {
+        filtroTexto = val.toLowerCase().trim();
+        renderLista();
+    }
+
+    function toggleFormNuevo() {
+        const f = document.getElementById('newCardForm');
+        f.style.display = (f.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function guardarNuevaClave() {
+        const s = document.getElementById('newServicio').value.trim();
+        const u = document.getElementById('newUsuario').value.trim();
+        const p = document.getElementById('newPass').value.trim();
+        const t = document.getElementById('newTipo').value;
+
+        if (!s || !p) { alert("Indica Servicio y Contraseña."); return; }
+
+        const hoy = new Date();
+        const fechaStr = `${hoy.getDate().toString().padStart(2,'0')}/${(hoy.getMonth()+1).toString().padStart(2,'0')}/${hoy.getFullYear()}`;
+        const passCifrada = btoa(encodeURIComponent(p));
+
+        vault.push({ servicio: s, usuario: u, passwordCifrada: passCifrada, tipo: t, fechaModif: fechaStr });
+        guardarLocal();
+        renderLista();
+
+        document.getElementById('newServicio').value = "";
+        document.getElementById('newUsuario').value = "";
+        document.getElementById('newPass').value = "";
+        toggleFormNuevo();
+        lanzarToast("CLAVE AÑADIDA");
+    }
+
+    function renderLista() {
+        const cont = document.getElementById('vaultList');
+        if (!cont) return;
+        cont.innerHTML = "";
+
+        if (vault.length === 0) {
+            cont.innerHTML = `<div style="text-align:center; color:var(--text-dim); padding:40px 20px; font-size:11px; line-height:1.6;">LLAVERO VACÍO.<br><br>PULSA "☁️ BAJAR" PARA TRAER TUS CLAVES DE GOOGLE SHEETS.</div>`;
+            return;
+        }
+
+        const filtradas = vault.filter(k => {
+            if (!filtroTexto) return true;
+            return k.servicio.toLowerCase().includes(filtroTexto) || 
+                   (k.usuario && k.usuario.toLowerCase().includes(filtroTexto));
+        });
+
+        // Ordenación alfabética A-Z por servicio
+        filtradas.sort((a, b) => a.servicio.localeCompare(b.servicio, 'es', { sensitivity: 'base' }));
+
+        if (filtradas.length === 0) {
+            cont.innerHTML = `<div style="text-align:center; color:var(--text-dim); padding:30px; font-size:11px;">NO SE ENCONTRARON RESULTADOS.</div>`;
+            return;
+        }
+
+        filtradas.forEach(k => {
+            const idxOriginal = vault.indexOf(k);
+            let passDecoded = "";
+            try { passDecoded = decodeURIComponent(atob(k.passwordCifrada)); } catch (e) { passDecoded = k.passwordCifrada; }
+
+            const card = document.createElement('div');
+            card.className = `cred-card ${k.tipo.toLowerCase()}`;
+            card.innerHTML = `
+                <div class="cred-top">
+                    <span class="cred-service">${k.servicio}</span>
+                    <span class="cred-badge badge-${k.tipo.toLowerCase()}">${k.tipo}</span>
+                </div>
+                
+                <div class="cred-row">
+                    <span class="cred-val">${k.usuario || '<span style="color:#555;">(Sin usuario)</span>'}</span>
+                    <button class="btn-touch-copy" onclick="copiar('${k.usuario || ''}', 'USUARIO')">📋</button>
+                </div>
+
+                <div class="cred-row">
+                    <span class="cred-val" id="passVal-${idxOriginal}">••••••••</span>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn-touch-copy" onclick="togglePass(${idxOriginal}, '${passDecoded}')">👁️</button>
+                        <button class="btn-touch-copy" onclick="copiar('${passDecoded}', 'PASSWORD')">🔑</button>
+                    </div>
+                </div>
+
+                <div class="cred-footer">
+                    <span>Modif: ${k.fechaModif || '-'}</span>
+                    <button onclick="borrarClave(${idxOriginal})" style="font-size:7px; padding:4px 8px; border:1px solid var(--neon-red); color:var(--neon-red); background:transparent; border-radius:4px;">BORRAR</button>
+                </div>
+            `;
+            cont.appendChild(card);
+        });
+    }
+
+    function togglePass(idx, passReal) {
+        const span = document.getElementById(`passVal-${idx}`);
+        span.innerText = (span.innerText === "••••••••") ? passReal : "••••••••";
+    }
+
+    function copiar(txt, tipoLabel) {
+        if (!txt) return;
+        navigator.clipboard.writeText(txt);
+        if (navigator.vibrate) navigator.vibrate(40);
+        lanzarToast(`${tipoLabel} COPIADO`);
+    }
+
+    function lanzarToast(msg) {
+        const t = document.getElementById('copyToast');
+        t.innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 1600);
+    }
+
+    function borrarClave(idx) {
+        if (confirm("¿Eliminar esta credencial del llavero?")) {
+            vault.splice(idx, 1);
+            guardarLocal();
+            renderLista();
+            lanzarToast("CLAVE ELIMINADA");
+        }
+    }
+
+    function descargarNube() {
+        if (!GOOGLE_SCRIPT_URL) return;
+        if (!confirm("¿Descargar claves desde Google Sheets?")) return;
+
+        fetch(GOOGLE_SCRIPT_URL + "?action=getVault", { method: "GET", redirect: "follow" })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                vault = data.vault || [];
+                guardarLocal();
+                renderLista();
+                lanzarToast(`DESCARGADAS ${vault.length} CLAVES`);
+            } else {
+                alert("⚠️ Error: " + data.message);
+            }
+        })
+        .catch(err => alert("❌ Error de conexión: " + err.message));
+    }
+
+    function subirNube() {
+        if (!GOOGLE_SCRIPT_URL) return;
+        if (vault.length === 0) { alert("El llavero está vacío."); return; }
+        if (!confirm(`¿Subir ${vault.length} claves a Google Sheets?`)) return;
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "saveVault", vault: vault })
+        }).then(() => lanzarToast("GUARDADO EN SHEETS"));
+    }
+
+    function exportarComunes() {
+        const comunes = vault.filter(k => k.tipo === "Común");
+        if (comunes.length === 0) { alert("No hay claves marcadas como 'Común'."); return; }
+
+        let txt = "=== CREDENCIALES COMUNES ===\n\n";
+        comunes.forEach(k => {
+            let pass = "";
+            try { pass = decodeURIComponent(atob(k.passwordCifrada)); } catch(e) { pass = k.passwordCifrada; }
+            txt += `${k.servicio.toUpperCase()}\nUser: ${k.usuario || '-'}\nPass: ${pass}\nFecha: ${k.fechaModif}\n--------------------\n`;
+        });
+
+        const a = document.createElement('a');
+        a.href = "data:text/plain;charset=utf-8," + encodeURIComponent(txt);
+        a.download = `Claves_Comunes_${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    window.onload = iniciar;
+</script>
+</body>
+</html>
