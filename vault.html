@@ -109,7 +109,7 @@ header{
    <button class="key-btn pin-danger" onclick="borrarPin()" style="font-size:10px;">DEL</button><button class="key-btn" onclick="tocarPin('0')">0</button><button class="key-btn pin-ok" onclick="validarPin()" style="font-size:10px;">OK</button>
   </div>
   <div id="pinError">PIN INCORRECTO</div>
-  <div class="auth-note">AES-256 · PBKDF2-SHA-256 · respaldo local antes de cada cambio</div>
+  <div class="auth-note">AES-256 · PBKDF2-SHA-256 · sincronización segura entre dispositivos</div>
  </div>
 </div>
 
@@ -143,6 +143,7 @@ header{
 
 <div class="search-box"><div class="search-wrap"><span class="search-icon">⌕</span><input type="search" id="searchInput" autocomplete="off" autocapitalize="none" placeholder="Buscar servicio o usuario…" oninput="filtrar(this.value)"><button class="search-clear" id="searchClear" aria-label="Limpiar búsqueda" onclick="limpiarBusqueda()">×</button></div></div>
 <div class="list-meta"><span id="listCount">0 CLAVES</span><span id="listStatus">BLOQUEADO</span></div>
+<div style="margin:0 2px 10px;padding:8px 10px;border:1px solid rgba(0,234,255,.18);border-radius:10px;background:rgba(0,234,255,.035);color:#81798f;font-size:8px;font-weight:850;line-height:1.4;">☁️ <b style="color:#a9a1b6;">MULTIDISPOSITIVO:</b> la copia cloud conserva la configuración pública de cifrado; la contraseña sigue protegida por tu PIN.</div>
 
 <div class="new-card-form" id="newCardForm">
  <div class="new-form-title">＋ NUEVA CREDENCIAL</div>
@@ -164,6 +165,7 @@ const VAULT_STORAGE_KEY="arcade_vault_secure";
 const AUTH_STORAGE_KEY="arcade_vault_auth";
 const LEGACY_STORAGE_KEY="arcade_vault";
 const BACKUP_STORAGE_KEY="arcade_vault_backups";
+const SYNC_AUTH_FIELD="_vaultSyncAuth";
 const MAX_BACKUPS=5;
 const AUTO_LOCK_MS=5*60*1000;
 
@@ -184,8 +186,10 @@ function base64ToArrayBuffer(base64){const binary=atob(base64),bytes=new Uint8Ar
 function randomBytes(length){return crypto.getRandomValues(new Uint8Array(length))}
 async function deriveKey(pin,salt,usage=["encrypt","decrypt"]){const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:PBKDF2_ITERATIONS,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,usage)}
 async function deriveVerifier(pin,salt){const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:PBKDF2_ITERATIONS,hash:"SHA-256"},material,256);return arrayBufferToBase64(bits)}
-async function encryptText(value){if(!cryptoKey)throw new Error("Vault bloqueado");const iv=randomBytes(12);const data=new TextEncoder().encode(String(value));const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},cryptoKey,data);return{v:SECURITY_VERSION,iv:arrayBufferToBase64(iv),data:arrayBufferToBase64(encrypted)}}
-async function decryptText(record){if(!cryptoKey)throw new Error("Vault bloqueado");if(!record||record.v!==SECURITY_VERSION||typeof record.iv!=="string"||typeof record.data!=="string")throw new Error("Registro cifrado inválido");const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:new Uint8Array(base64ToArrayBuffer(record.iv))},cryptoKey,base64ToArrayBuffer(record.data));return new TextDecoder().decode(plain)}
+async function encryptText(value){if(!cryptoKey)throw new Error("Vault bloqueado");return encryptTextWithKey(value,cryptoKey)}
+async function encryptTextWithKey(value,key){if(!key)throw new Error("Clave criptográfica no disponible");const iv=randomBytes(12);const data=new TextEncoder().encode(String(value));const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,data);return{v:SECURITY_VERSION,iv:arrayBufferToBase64(iv),data:arrayBufferToBase64(encrypted)}}
+async function decryptText(record){if(!cryptoKey)throw new Error("Vault bloqueado");return decryptTextWithKey(record,cryptoKey)}
+async function decryptTextWithKey(record,key){if(!key)throw new Error("Clave criptográfica no disponible");if(!record||record.v!==SECURITY_VERSION||typeof record.iv!=="string"||typeof record.data!=="string")throw new Error("Registro cifrado inválido");const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:new Uint8Array(base64ToArrayBuffer(record.iv))},key,base64ToArrayBuffer(record.data));return new TextDecoder().decode(plain)}
 function borrarSesion(){cryptoKey=null;vault=[];latestDeleted=null;actualizarEstadoUI()}
 
 function actualizarEstadoUI(){
@@ -193,7 +197,7 @@ function actualizarEstadoUI(){
  const status=document.getElementById("listStatus");if(status)status.innerText=unlocked?"AES-256 · PROTEGIDO":"BLOQUEADO";
  const card=document.getElementById("statusCard");if(card)card.classList.toggle("locked",!unlocked);
  const main=document.getElementById("statusMain");if(main)main.innerText=unlocked?"VAULT DESBLOQUEADO":"VAULT BLOQUEADO";
- const sub=document.getElementById("statusSub");if(sub)sub.innerText=unlocked?"Cifrado local · copia de seguridad antes de cambios":"Las contraseñas no salen del dispositivo en claro";
+ const sub=document.getElementById("statusSub");if(sub)sub.innerText=unlocked?"AES-256 local · nube compatible con varios dispositivos":"Las contraseñas no salen del dispositivo en claro";
  const count=document.getElementById("vaultCounter");if(count)count.innerText=String(Array.isArray(vault)?vault.length:0);
  const listCount=document.getElementById("listCount");if(listCount)listCount.innerText=`${Array.isArray(vault)?vault.length:0} CLAVES`;
  const undo=document.getElementById("btnUndo");if(undo){undo.disabled=!latestDeleted;undo.classList.toggle("undo-ready",!!latestDeleted)}
@@ -208,7 +212,7 @@ function mostrarEstadoRecuperacion(){
 }
 function decodificarLegacy(valor){try{return decodeURIComponent(atob(valor))}catch(e){return String(valor??"")}}
 function esRegistroCifrado(k){return!!(k&&k.passwordCifrada&&typeof k.passwordCifrada==="object"&&k.passwordCifrada.v===SECURITY_VERSION&&typeof k.passwordCifrada.iv==="string"&&typeof k.passwordCifrada.data==="string")}
-async function migrarLegacyVault(legacyVault){
+async function migrarLegacyVault(legacyVault,key=cryptoKey){
  if(!Array.isArray(legacyVault))return [];
  const migrado=[];
  for(const k of legacyVault){
@@ -220,7 +224,7 @@ async function migrarLegacyVault(legacyVault){
       migrado.push({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:k.passwordCifrada});continue;
    }else if(k.passwordCifrada&&typeof k.passwordCifrada==="object")throw new Error(`La credencial "${k.servicio||"sin nombre"}" tiene un cifrado desconocido y no se tocará.`);
    else password="";
-   migrado.push({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:await encryptText(password)});
+   migrado.push({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:await encryptTextWithKey(password,key)});
  }
  return migrado;
 }
@@ -268,9 +272,9 @@ async function cargarVaultLocalSeguro(){
  const payload=JSON.parse(raw);if(payload.version!==SECURITY_VERSION||!Array.isArray(payload.vault))throw new Error("Formato seguro inválido");
  vault=payload.vault.map(item=>({servicio:item.servicio||"",usuario:item.usuario||"",tipo:item.tipo||"Común",fechaModif:item.fechaModif||"",passwordCifrada:item.passwordCifrada}));
 }
-async function verificarVaultCifrado(items){
+async function verificarVaultCifrado(items,key=cryptoKey){
  if(!Array.isArray(items))throw new Error("Vault inválido");
- for(const k of items){if(!esRegistroCifrado(k))throw new Error(`La credencial "${k?.servicio||"sin nombre"}" no tiene un cifrado válido.`);await decryptText(k.passwordCifrada)}
+ for(const k of items){if(!esRegistroCifrado(k))throw new Error(`La credencial "${k?.servicio||"sin nombre"}" no tiene un cifrado válido.`);await decryptTextWithKey(k.passwordCifrada,key)}
  return true;
 }
 async function protegerVault(){
@@ -339,29 +343,86 @@ async function borrarClave(idx){
  latestDeleted={index:idx,record:vault[idx],removedAt:Date.now()};vault.splice(idx,1);
  try{await guardarLocal("borrar credencial");renderLista();lanzarToast("✓ CLAVE ELIMINADA · DESHACER DISPONIBLE")}catch(e){vault.splice(idx,0,latestDeleted.record);latestDeleted=null;actualizarEstadoUI();lanzarToast("⚠️ NO SE PUDO BORRAR")}
 }
+function publicarAuth(meta){
+ if(!meta||typeof meta.salt!=="string"||typeof meta.verifier!=="string")return null;
+ return {version:SECURITY_VERSION,kdf:"PBKDF2-SHA256",iterations:PBKDF2_ITERATIONS,salt:meta.salt,verifier:meta.verifier};
+}
+function authEsValida(meta){return!!(meta&&meta.version===SECURITY_VERSION&&meta.kdf==="PBKDF2-SHA256"&&Number(meta.iterations)===PBKDF2_ITERATIONS&&typeof meta.salt==="string"&&typeof meta.verifier==="string")}
+function authIgual(a,b){return !!(authEsValida(a)&&authEsValida(b)&&a.salt===b.salt&&a.verifier===b.verifier)}
+function extraerAuthRemota(data,remote){
+ const candidates=[];
+ if(data&&typeof data==="object")candidates.push(data.auth,data.syncAuth,data.meta);
+ if(Array.isArray(remote)){for(const k of remote){if(k&&typeof k==="object"&&k[SYNC_AUTH_FIELD]){candidates.push(k[SYNC_AUTH_FIELD]);break}}}
+ for(const meta of candidates)if(authEsValida(meta))return publicarAuth(meta);
+ return null;
+}
+async function obtenerClaveParaAuthRemota(remoteAuth){
+ if(!authEsValida(remoteAuth))return {key:cryptoKey,auth:securityMeta,remote:false};
+ if(authIgual(remoteAuth,securityMeta))return {key:cryptoKey,auth:securityMeta,remote:false};
+ const pin=window.prompt("VAULT MULTIDISPOSITIVO\n\nLa copia de Google Sheets usa otra sal/clave de cifrado.\n\nIntroduce tu PIN maestro de 6 dígitos para verificarla y abrirla en este dispositivo:","");
+ if(pin===null)throw new Error("Importación cancelada.");
+ if(!/^\d{6}$/.test(pin))throw new Error("El PIN debe tener exactamente 6 dígitos.");
+ const salt=new Uint8Array(base64ToArrayBuffer(remoteAuth.salt));
+ const verifier=await deriveVerifier(pin,salt);
+ if(verifier!==remoteAuth.verifier)throw new Error("El PIN no coincide con la copia de Google Sheets.");
+ const key=await deriveKey(pin,salt);
+ return {key,auth:remoteAuth,remote:true};
+}
+
 function normalizarVaultRemoto(raw){
  if(Array.isArray(raw))return raw;if(raw&&typeof raw==="object"){if(Array.isArray(raw.vault))return raw.vault;if(Array.isArray(raw.data))return raw.data;if(typeof raw.vault==="string")return normalizarVaultRemoto(raw.vault);if(typeof raw.data==="string")return normalizarVaultRemoto(raw.data)}if(typeof raw==="string"){try{return normalizarVaultRemoto(JSON.parse(raw))}catch(e){}}return[]
 }
 function validarRegistrosRemotos(items){if(!Array.isArray(items))throw new Error("Google Sheets no devolvió una lista válida.");for(const k of items){if(!k||typeof k!=="object")throw new Error("Se encontró una credencial con formato inválido.");if(typeof k.servicio!=="string")throw new Error("Se encontró una credencial sin servicio válido.")}}
 async function descargarNube(){
  if(!GOOGLE_SCRIPT_URL||busy)return;if(!cryptoKey){lanzarToast("DESBLOQUEA EL VAULT");return}
- const hayLocal=vault.length>0;const mensaje=hayLocal?`⚠️ BAJAR VA A REEMPLAZAR EL LLAVERO LOCAL.\n\nLocal: ${vault.length} claves.\n\nGoogle Sheets será la fuente de la importación. Antes se guardará una copia local del estado actual.\n\n¿Continuar?`:`☁️ BAJAR CLAVES\n\nSe traerán las credenciales de Google Sheets.\n\n¿Continuar?`;if(!confirm(mensaje))return;
- setBusy(true,"BAJANDO…");try{
-  const res=await fetch(GOOGLE_SCRIPT_URL+"?action=getVault&ts="+Date.now(),{method:"GET",redirect:"follow",cache:"no-store"});if(!res.ok)throw new Error(`Google Sheets respondió con HTTP ${res.status}.`);const data=await res.json();if(data.status!=="success")throw new Error(data.message||"Respuesta no válida de Google Sheets.");
-  const remote=normalizarVaultRemoto(data.vault??data.data??data);validarRegistrosRemotos(remote);if(!remote.length){lanzarToast("⚠️ GOOGLE SHEETS ESTÁ VACÍO");return}
-  const candidate=remote.some(k=>!esRegistroCifrado(k))?await migrarLegacyVault(remote):remote;
-  await verificarVaultCifrado(candidate);
-  // IMPORTANT: import only. Never write anything back to Google automatically.
-  vault=candidate;await guardarLocal("importar desde cloud");renderLista();
-  lanzarToast(`✓ ${vault.length} CLAVES IMPORTADAS · CLOUD SIN CAMBIOS`);
- }catch(err){console.error(err);alert("❌ NO SE HA CAMBIADO EL LLAVERO\n\n"+(err.message||"Error desconocido.")+"\n\nLa versión local anterior sigue guardada.")}finally{setBusy(false)}
+ const hayLocal=vault.length>0;
+ const mensaje=hayLocal?`☁️ BAJAR DESDE CLOUD\n\nLocal: ${vault.length} claves.\n\nSe comprobará primero la copia de Google Sheets. Si pertenece a otro dispositivo, podrás verificarla con tu PIN y se adoptará su configuración de cifrado.\n\nNO se escribirá nada en Google Sheets.\n\n¿Continuar?`:`☁️ BAJAR DESDE CLOUD\n\nSe comprobará la copia de Google Sheets y se cargará sólo si todas las claves se pueden descifrar.\n\nNO se escribirá nada en Google Sheets.\n\n¿Continuar?`;
+ if(!confirm(mensaje))return;
+ setBusy(true,"BAJANDO…");
+ const oldVault=vault,oldAuth=securityMeta,oldKey=cryptoKey;
+ try{
+  const res=await fetch(GOOGLE_SCRIPT_URL+"?action=getVault&ts="+Date.now(),{method:"GET",redirect:"follow",cache:"no-store"});
+  if(!res.ok)throw new Error(`Google Sheets respondió con HTTP ${res.status}.`);
+  const data=await res.json();if(data.status!=="success")throw new Error(data.message||"Respuesta no válida de Google Sheets.");
+  const remote=normalizarVaultRemoto(data.vault??data.data??data);validarRegistrosRemotos(remote);
+  if(!remote.length){lanzarToast("⚠️ GOOGLE SHEETS ESTÁ VACÍO");return}
+  const remoteAuth=extraerAuthRemota(data,remote);
+  const keyInfo=await obtenerClaveParaAuthRemota(remoteAuth);
+  let candidate;
+  if(remote.some(k=>!esRegistroCifrado(k))){
+    candidate=await migrarLegacyVault(remote,keyInfo.key);
+  }else{
+    candidate=remote.map(k=>({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:k.passwordCifrada}));
+  }
+  await verificarVaultCifrado(candidate,keyInfo.key);
+  if(!candidate.length)throw new Error("La copia remota no contiene credenciales.");
+  if(!confirm(`✓ COPIA COMPROBADA\n\nSe han podido descifrar ${candidate.length} claves.\n${keyInfo.remote?"\nEsta copia procede de otro dispositivo y usa una configuración de cifrado compartida por cloud.":""}\n\nSe guardará primero un respaldo del llavero local actual.\n\n¿CARGAR ESTA COPIA?`))return;
+  crearSnapshotLocal("antes de importar desde cloud");
+  vault=candidate;
+  if(keyInfo.remote){securityMeta=keyInfo.auth;cryptoKey=keyInfo.key;guardarAuthMeta()}
+  localStorage.setItem(VAULT_STORAGE_KEY,JSON.stringify(await protegerVault()));
+  latestDeleted=null;renderLista();
+  lanzarToast(`✓ ${vault.length} CLAVES CARGADAS · MULTIDISPOSITIVO`);
+ }catch(err){
+  vault=oldVault;securityMeta=oldAuth;cryptoKey=oldKey;
+  console.error("Error al descargar vault:",err);
+  alert("❌ NO SE HA CAMBIADO EL LLAVERO\n\n"+(err.message||"Error desconocido.")+"\n\nEl llavero local anterior sigue intacto.");
+ }finally{setBusy(false)}
 }
 async function subirNube(){
- if(!GOOGLE_SCRIPT_URL||busy)return;if(!cryptoKey){lanzarToast("DESBLOQUEA EL VAULT");return}if(!vault.length){lanzarToast("EL LLAVERO ESTÁ VACÍO");return}
+ if(!GOOGLE_SCRIPT_URL||busy)return;if(!cryptoKey||!securityMeta){lanzarToast("DESBLOQUEA EL VAULT");return}
+ if(!vault.length){lanzarToast("EL LLAVERO ESTÁ VACÍO");return}
  try{await verificarVaultCifrado(vault)}catch(e){alert("❌ NO SE PUEDE SUBIR\n\n"+e.message);return}
+ const auth=publicarAuth(securityMeta);if(!auth)throw new Error("No se ha podido preparar la configuración de cifrado.");
+ const cloudVault=vault.map(k=>({...k,[SYNC_AUTH_FIELD]:auth}));
  crearSnapshotLocal("antes de subir a cloud");
- const mensaje=`⚠️ SUBIR VA A REEMPLAZAR EL VAULT DE GOOGLE SHEETS.\n\nSe enviarán ${vault.length} credenciales cifradas.\n\nEsta aplicación no puede leer la respuesta del POST por las restricciones del navegador, por lo que el botón no puede prometer una confirmación del servidor.\n\n¿ESTÁS SEGURO?`;if(!confirm(mensaje))return;
- setBusy(true,"SUBIENDO…");try{await fetch(GOOGLE_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"saveVault",vault})});lanzarToast("✓ PETICIÓN DE SUBIDA ENVIADA");}catch(err){console.error(err);alert("❌ NO SE HA PODIDO ENVIAR EL VAULT\n\n"+(err.message||"Error desconocido."))}finally{setBusy(false)}
+ const mensaje=`☁️ SUBIR VAULT\n\nSe enviarán ${vault.length} claves cifradas.\n\nAdemás se guardará la información pública necesaria para que OTRO dispositivo pueda derivar la misma clave a partir de tu PIN.\n\nGoogle Sheets reemplazará su copia actual.\n\n¿ESTÁS SEGURO?`;
+ if(!confirm(mensaje))return;
+ setBusy(true,"SUBIENDO…");
+ try{
+  await fetch(GOOGLE_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"saveVault",format:"VAULT-POCKET-SYNC",version:1,auth,vault:cloudVault})});
+  lanzarToast("✓ CLOUD ACTUALIZADO · MULTIDISPOSITIVO");
+ }catch(err){console.error(err);alert("❌ NO SE HA PODIDO ENVIAR EL VAULT\n\n"+(err.message||"Error desconocido."))}finally{setBusy(false)}
 }
 function setBusy(state,label=""){
  busy=state;const down=document.getElementById("btnDownload"),up=document.getElementById("btnUpload");for(const btn of [down,up])if(btn){btn.disabled=state;btn.style.opacity=state?".55":"1";if(state){if(!btn.dataset.original)btn.dataset.original=btn.innerHTML;btn.innerText=label||"…"}else btn.innerHTML=btn.dataset.original||btn.innerHTML}actualizarEstadoUI()
@@ -381,11 +442,14 @@ async function importarCopiaDesdeInput(event){
  const file=event.target.files?.[0];event.target.value="";if(!file)return;if(!cryptoKey||!securityMeta){lanzarToast("DESBLOQUEA EL VAULT");return}
  try{
   const payload=JSON.parse(await file.text());if(payload.format!=="VAULT-POCKET-BACKUP"||payload.version!==1||!payload.auth||!payload.secure)throw new Error("Archivo de copia no reconocido.");
-  if(payload.auth.verifier!==securityMeta.verifier||payload.auth.salt!==securityMeta.salt)throw new Error("La copia pertenece a otro PIN/llavero.");
   if(payload.secure.version!==SECURITY_VERSION||!Array.isArray(payload.secure.vault))throw new Error("Formato de vault incompatible.");
-  const candidate=payload.secure.vault.map(k=>({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:k.passwordCifrada}));await verificarVaultCifrado(candidate);
-  if(!confirm(`La copia contiene ${candidate.length} credenciales.\n\nSe guardará una copia del estado actual antes de restaurarla.\n\n¿Restaurar?`))return;
-  crearSnapshotLocal("antes de restaurar copia");vault=candidate;localStorage.setItem(VAULT_STORAGE_KEY,JSON.stringify(payload.secure));renderLista();lanzarToast(`✓ COPIA RESTAURADA · ${vault.length} CLAVES`);
+  const remoteAuth=publicarAuth(payload.auth);if(!remoteAuth)throw new Error("La copia no contiene una configuración de cifrado válida.");
+  const keyInfo=await obtenerClaveParaAuthRemota(remoteAuth);
+  const candidate=payload.secure.vault.map(k=>({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:k.passwordCifrada}));await verificarVaultCifrado(candidate,keyInfo.key);
+  if(!confirm(`✓ COPIA COMPROBADA\n\nLa copia contiene ${candidate.length} credenciales y todas se pueden descifrar.${keyInfo.remote?"\n\nProcede de otro dispositivo; se adaptará este dispositivo a la misma configuración de cifrado.":""}\n\nSe guardará una copia del estado actual antes de restaurarla.\n\n¿Restaurar?`))return;
+  crearSnapshotLocal("antes de restaurar copia");
+  vault=candidate;securityMeta=keyInfo.auth;cryptoKey=keyInfo.key;guardarAuthMeta();localStorage.setItem(VAULT_STORAGE_KEY,JSON.stringify(await protegerVault()));
+  latestDeleted=null;renderLista();lanzarToast(`✓ COPIA RESTAURADA · ${vault.length} CLAVES`);
  }catch(e){console.error(e);alert("❌ NO SE HA RESTAURADO LA COPIA\n\n"+(e.message||"Archivo no válido."))}
 }
 
