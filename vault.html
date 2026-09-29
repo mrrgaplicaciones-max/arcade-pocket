@@ -597,7 +597,18 @@ async function guardarNuevaClave(){
     lanzarToast("✓ CLAVE AÑADIDA");
 }
 function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]))}
-async function renderLista(){
+function actualizarContador(n){
+    const candidatos=[
+        document.getElementById("vaultCounter"),
+        document.getElementById("credentialCount"),
+        document.querySelector(".vault-count")
+    ];
+    const el=candidatos.find(Boolean);
+    if(!el)return;
+    el.textContent=`${Number(n)||0} CLAVES`;
+}
+
+function renderLista(){
     const cont=document.getElementById("vaultList");
     if(!cont)return;
     cont.innerHTML="";
