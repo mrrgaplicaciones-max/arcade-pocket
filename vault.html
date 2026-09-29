@@ -220,7 +220,7 @@ header{
             <button class="key-btn" onclick="tocarPin('0')">0</button>
             <button class="key-btn" onclick="validarPin()" class="pin-ok" style="font-size:10px;">OK</button>
         </div>
-        <div id="pinError" style="color:var(--neon-red); font-size:10px; margin-top:12px; display:none;">PIN INCORRECTO</div>
+        <div id="pinError">PIN INCORRECTO</div>
     </div>
 </div>
 
@@ -232,7 +232,7 @@ header{
         <span class="header-icon">🔑</span>
         <div>
             <div class="header-title">VAULT POCKET</div>
-            <div class="header-sub">Gestor Móvil de Claves</div>
+            <div class="header-sub">Gestor Móvil · AES-256</div>
         </div>
     </div>
     <button class="btn-lock-top" onclick="bloquearApp()">BLOQUEAR</button>
@@ -271,31 +271,305 @@ header{
 
 <script>
 const GOOGLE_SCRIPT_URL="https://script.google.com/macros/s/AKfycbzr27kS6ZtDX3GSqjWRUTGxF1Uecp1x96yVAaPmPB4h2ogTRRcBdcR31IcUG0ZI3CNu/exec";
-const PIN_MAESTRO="1981";
-let vault=[],filtroTexto="",pinBuffer="",toastTimer=null,busy=false;
 
-function iniciar(){
-    try{const lv=localStorage.getItem("arcade_vault");if(lv)vault=JSON.parse(lv);if(!Array.isArray(vault))vault=[]}
-    catch(e){vault=[]}
-    actualizarBusquedaUI();renderLista();
+const SECURITY_VERSION = 2;
+const PBKDF2_ITERATIONS = 250000;
+const VAULT_STORAGE_KEY = "arcade_vault_secure";
+const AUTH_STORAGE_KEY = "arcade_vault_auth";
+const LEGACY_STORAGE_KEY = "arcade_vault";
+
+let vault=[],filtroTexto="",pinBuffer="",toastTimer=null,busy=false;
+let cryptoKey=null;
+let securityMeta=null;
+
+async function iniciar(){
+    try{
+        await cargarConfiguracionSegura();
+    }catch(e){
+        console.error("No se pudo inicializar la seguridad",e);
+    }
+    actualizarBusquedaUI();
+    actualizarEstadoSeguridad();
+    // If no secure vault exists, show the setup screen; otherwise require PIN.
+    if(!securityMeta){
+        mostrarConfiguracionInicial();
+    }
+}
+function arrayBufferToBase64(buffer){
+    let bytes=new Uint8Array(buffer),binary="";
+    const chunk=0x8000;
+    for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+    return btoa(binary);
+}
+function base64ToArrayBuffer(base64){
+    const binary=atob(base64),bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    return bytes.buffer;
+}
+function randomBytes(length){return crypto.getRandomValues(new Uint8Array(length))}
+async function sha256Base64(bytes){
+    return arrayBufferToBase64(await crypto.subtle.digest("SHA-256",bytes));
+}
+async function deriveKey(pin,salt,usage=["encrypt","decrypt"]){
+    const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveKey"]);
+    return crypto.subtle.deriveKey(
+        {name:"PBKDF2",salt,iterations:PBKDF2_ITERATIONS,hash:"SHA-256"},
+        material,{name:"AES-GCM",length:256},false,usage
+    );
+}
+async function deriveVerifier(pin,salt){
+    const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveBits"]);
+    const bits=await crypto.subtle.deriveBits(
+        {name:"PBKDF2",salt,iterations:PBKDF2_ITERATIONS,hash:"SHA-256"},material,256
+    );
+    return arrayBufferToBase64(bits);
+}
+async function encryptText(value){
+    if(!cryptoKey)throw new Error("Vault bloqueado");
+    const iv=randomBytes(12);
+    const data=new TextEncoder().encode(value);
+    const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},cryptoKey,data);
+    return {v:SECURITY_VERSION,iv:arrayBufferToBase64(iv),data:arrayBufferToBase64(encrypted)};
+}
+async function decryptText(record){
+    if(!cryptoKey)throw new Error("Vault bloqueado");
+    const plain=await crypto.subtle.decrypt(
+        {name:"AES-GCM",iv:new Uint8Array(base64ToArrayBuffer(record.iv))},
+        cryptoKey,base64ToArrayBuffer(record.data)
+    );
+    return new TextDecoder().decode(plain);
+}
+function borrarSesion(){
+    cryptoKey=null;
+    vault=[];
+}
+function actualizarEstadoSeguridad(){
+    const status=document.getElementById("listStatus");
+    if(status)status.innerText=cryptoKey?"AES-256 · protegido":"bloqueado";
+}
+function mostrarConfiguracionInicial(){
+    document.getElementById("authScreen").style.display="flex";
+    document.querySelector(".auth-title").innerText="CONFIGURA TU VAULT";
+    document.querySelector(".auth-subtitle").innerText="Crea un PIN de 6 dígitos";
+    document.getElementById("pinError").innerText="";
+    document.getElementById("pinError").style.display="block";
+    document.getElementById("pinError").style.color="var(--muted)";
+    document.getElementById("pinError").innerText="El PIN protegerá el contenido con AES-256.";
+    window._setupMode=true;
+}
+function decodificarLegacy(valor){
+    try{return decodeURIComponent(atob(valor))}
+    catch(e){return String(valor||"")}
+}
+async function migrarLegacyVault(legacyVault){
+    if(!Array.isArray(legacyVault))return [];
+    const migrado=[];
+    for(const k of legacyVault){
+        let password="";
+        if(typeof k.passwordCifrada==="string")password=decodificarLegacy(k.passwordCifrada);
+        else if(k.passwordCifrada&&typeof k.passwordCifrada==="object")password="";
+        migrado.push({
+            servicio:k.servicio||"",
+            usuario:k.usuario||"",
+            tipo:k.tipo||"Común",
+            fechaModif:k.fechaModif||"",
+            passwordCifrada:await cifrarClaveNueva(password)
+        });
+    }
+    return migrado;
+}
+async function configurarPIN(){
+    const pin=pinBuffer;
+    if(!/^\\d{6}$/.test(pin)){
+        mostrarErrorPIN("Usa exactamente 6 dígitos.");
+        return;
+    }
+    try{
+        const salt=randomBytes(16);
+        const key=await deriveKey(pin,salt);
+        const verifier=await deriveVerifier(pin,salt);
+        securityMeta={
+            version:SECURITY_VERSION,
+            kdf:"PBKDF2-SHA256",
+            iterations:PBKDF2_ITERATIONS,
+            salt:arrayBufferToBase64(salt),
+            verifier
+        };
+        cryptoKey=key;
+
+        // Migrate the old local vault (base64-obfuscated passwords) once.
+        let legacyVault=[];
+        try{
+            const legacyRaw=localStorage.getItem(LEGACY_STORAGE_KEY);
+            if(legacyRaw)legacyVault=JSON.parse(legacyRaw);
+        }catch(e){legacyVault=[]}
+
+        if(Array.isArray(legacyVault)&&legacyVault.length){
+            vault=await migrarLegacyVault(legacyVault);
+        }else{
+            vault=[];
+        }
+
+        guardarAuthMeta();
+        await guardarLocal();
+        // The old copy is no longer needed after successful encryption.
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+        document.getElementById("authScreen").style.display="none";
+        borrarPin();
+        window._setupMode=false;
+        actualizarEstadoSeguridad();
+        renderLista();
+        lanzarToast("✓ VAULT PROTEGIDO");
+    }catch(e){
+        mostrarErrorPIN("No se pudo crear el vault seguro.");
+        console.error(e);
+    }
+}
+async function validarPin(){
+    const pin=pinBuffer;
+    if(window._setupMode){
+        await configurarPIN();
+        return;
+    }
+    if(!securityMeta){
+        mostrarConfiguracionInicial();
+        return;
+    }
+    if(!/^\\d{6}$/.test(pin)){
+        mostrarErrorPIN("Introduce los 6 dígitos.");
+        return;
+    }
+    try{
+        const salt=new Uint8Array(base64ToArrayBuffer(securityMeta.salt));
+        const verifier=await deriveVerifier(pin,salt);
+        if(verifier!==securityMeta.verifier)throw new Error("PIN incorrecto");
+
+        cryptoKey=await deriveKey(pin,salt);
+        await cargarVaultLocalSeguro();
+
+        document.getElementById("authScreen").style.display="none";
+        borrarPin();
+        window._setupMode=false;
+        actualizarEstadoSeguridad();
+        renderLista();
+        lanzarToast("✓ VAULT DESBLOQUEADO");
+    }catch(e){
+        borrarSesion();
+        document.getElementById("pinDisplay").innerText="ERROR";
+        mostrarErrorPIN("PIN INCORRECTO");
+        if(navigator.vibrate)navigator.vibrate([35,30,35]);
+        setTimeout(borrarPin,700);
+    }
+}
+function mostrarErrorPIN(msg){
+    const e=document.getElementById("pinError");
+    e.innerText=msg;e.style.display="block";e.style.color="var(--red)";
+    if(navigator.vibrate)navigator.vibrate([25,20,25]);
 }
 function tocarPin(n){
-    if(pinBuffer.length<6){pinBuffer+=n;document.getElementById("pinDisplay").innerText="*".repeat(pinBuffer.length);if(navigator.vibrate)navigator.vibrate(12)}
+    if(pinBuffer.length<6){
+        pinBuffer+=n;
+        document.getElementById("pinDisplay").innerText="*".repeat(pinBuffer.length);
+        if(navigator.vibrate)navigator.vibrate(12);
+    }
 }
-function borrarPin(){pinBuffer="";document.getElementById("pinDisplay").innerText="----";document.getElementById("pinError").style.display="none"}
-function validarPin(){
-    if(pinBuffer===PIN_MAESTRO){
-        document.getElementById("authScreen").style.display="none";borrarPin();renderLista();lanzarToast("VAULT DESBLOQUEADO");
-    }else{
-        document.getElementById("pinError").style.display="block";document.getElementById("pinDisplay").innerText="ERROR";
-        if(navigator.vibrate)navigator.vibrate([35,30,35]);setTimeout(borrarPin,700);
+function borrarPin(){
+    pinBuffer="";
+    document.getElementById("pinDisplay").innerText="----";
+    if(!window._setupMode){
+        const e=document.getElementById("pinError");
+        e.style.display="none";
+        e.innerText="";
     }
 }
 function bloquearApp(){
+    borrarSesion();
     document.getElementById("authScreen").style.display="flex";
-    document.getElementById("newCardForm").style.display="none";borrarPin();window.scrollTo({top:0,behavior:"smooth"});
+    document.getElementById("newCardForm").style.display="none";
+    const title=document.querySelector(".auth-title"),sub=document.querySelector(".auth-subtitle");
+    if(title)title.innerText="ACCESO RESTRINGIDO";
+    if(sub)sub.innerText="Introduce tu PIN maestro";
+    window._setupMode=false;
+    borrarPin();
+    actualizarEstadoSeguridad();
+    window.scrollTo({top:0,behavior:"smooth"});
 }
-function guardarLocal(){localStorage.setItem("arcade_vault",JSON.stringify(vault))}
+async function cargarConfiguracionSegura(){
+    try{
+        const raw=localStorage.getItem(AUTH_STORAGE_KEY);
+        securityMeta=raw?JSON.parse(raw):null;
+    }catch(e){securityMeta=null}
+
+    // One-time compatibility path for the old local vault.
+    if(!securityMeta){
+        const legacy=localStorage.getItem(LEGACY_STORAGE_KEY);
+        if(legacy){
+            // Do not silently convert without authentication. The old application
+            // used a hard-coded PIN, so we leave the legacy copy untouched until
+            // the user explicitly creates the new secure vault.
+        }
+    }
+}
+function guardarAuthMeta(){
+    localStorage.setItem(AUTH_STORAGE_KEY,JSON.stringify(securityMeta));
+}
+async function cargarVaultLocalSeguro(){
+    const raw=localStorage.getItem(VAULT_STORAGE_KEY);
+    if(!raw){vault=[];return}
+    const payload=JSON.parse(raw);
+    if(payload.version!==SECURITY_VERSION||!Array.isArray(payload.vault))throw new Error("Formato seguro inválido");
+    const result=[];
+    for(const item of payload.vault){
+        result.push({
+            servicio:item.servicio||"",
+            usuario:item.usuario||"",
+            tipo:item.tipo||"Común",
+            fechaModif:item.fechaModif||"",
+            passwordCifrada:item.passwordCifrada
+        });
+    }
+    vault=result;
+}
+function esRegistroCifrado(k){
+    return !!(k&&k.passwordCifrada&&typeof k.passwordCifrada==="object"&&k.passwordCifrada.v===SECURITY_VERSION);
+}
+async function protegerVault(){
+    if(!cryptoKey)throw new Error("Vault bloqueado");
+    const out=[];
+    for(const k of vault){
+        let encrypted=k.passwordCifrada;
+        if(typeof encrypted==="string"){
+            // Legacy records cannot be decrypted using the new key. Keep this
+            // explicit so an old cloud vault is never mistaken for ciphertext.
+            throw new Error("Hay credenciales antiguas sin migrar. Descarga/importa el vault antiguo desde una sesión compatible antes de protegerlo.");
+        }
+        out.push({
+            servicio:k.servicio||"",
+            usuario:k.usuario||"",
+            tipo:k.tipo||"Común",
+            fechaModif:k.fechaModif||"",
+            passwordCifrada:encrypted
+        });
+    }
+    localStorage.setItem(VAULT_STORAGE_KEY,JSON.stringify({version:SECURITY_VERSION,vault:out}));
+}
+async function cifrarClaveNueva(password){
+    return await encryptText(password);
+}
+async function descifrarClave(k){
+    if(esRegistroCifrado(k))return await decryptText(k.passwordCifrada);
+    throw new Error("Credencial no cifrada");
+}
+async function guardarLocal(){
+    if(!cryptoKey)throw new Error("Vault bloqueado");
+    try{
+        await protegerVault();
+    }catch(e){
+        console.error(e);
+        lanzarToast("ERROR AL PROTEGER VAULT");
+        throw e;
+    }
+}
 function filtrar(val){filtroTexto=val.toLowerCase().trim();actualizarBusquedaUI();renderLista()}
 function limpiarBusqueda(){const input=document.getElementById("searchInput");input.value="";filtrar("");input.focus()}
 function actualizarBusquedaUI(){const clear=document.getElementById("searchClear");if(clear)clear.classList.toggle("show",filtroTexto.length>0)}
@@ -303,20 +577,20 @@ function toggleFormNuevo(){
     const f=document.getElementById("newCardForm"),abierto=f.style.display==="flex";f.style.display=abierto?"none":"flex";
     if(!abierto)setTimeout(()=>document.getElementById("newServicio").focus(),80);
 }
-function guardarNuevaClave(){
+async function guardarNuevaClave(){
     const s=document.getElementById("newServicio").value.trim(),u=document.getElementById("newUsuario").value.trim(),
           p=document.getElementById("newPass").value.trim(),t=document.getElementById("newTipo").value;
     if(!s||!p){lanzarToast("FALTAN SERVICIO Y CONTRASEÑA");(!s?document.getElementById("newServicio"):document.getElementById("newPass")).focus();return}
     const hoy=new Date(),fechaStr=`${hoy.getDate().toString().padStart(2,"0")}/${(hoy.getMonth()+1).toString().padStart(2,"0")}/${hoy.getFullYear()}`;
-    vault.push({servicio:s,usuario:u,passwordCifrada:btoa(encodeURIComponent(p)),tipo:t,fechaModif:fechaStr});
-    guardarLocal();renderLista();
+    const passwordCifrada=await cifrarClaveNueva(p);
+    vault.push({servicio:s,usuario:u,passwordCifrada,tipo:t,fechaModif:fechaStr});
+    await guardarLocal().then(()=>renderLista());
     document.getElementById("newServicio").value="";document.getElementById("newUsuario").value="";
     document.getElementById("newPass").value="";document.getElementById("newTipo").value="Común";toggleFormNuevo();
     lanzarToast("✓ CLAVE AÑADIDA");
 }
 function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]))}
-function decodePassword(k){try{return decodeURIComponent(atob(k.passwordCifrada))}catch(e){return k.passwordCifrada||""}}
-function renderLista(){
+async function renderLista(){
     const cont=document.getElementById("vaultList");if(!cont)return;cont.innerHTML="";
     if(vault.length===0){
         actualizarContador(0);cont.innerHTML='<div class="empty-state"><span class="empty-icon">🗝️</span><strong>LLAVERO VACÍO</strong><br>Pulsa <b>BAJAR</b> para traer tus claves de Google Sheets.</div>';return;
@@ -330,9 +604,11 @@ function renderLista(){
     if(!filtradas.length){
         cont.innerHTML=`<div class="empty-state"><span class="empty-icon">🔎</span>No se encontraron resultados para<br><strong>"${escapeHTML(filtroTexto)}"</strong></div>`;return;
     }
-    filtradas.forEach(k=>{
-        const idx=vault.indexOf(k),tipo=k.tipo==="Particular"?"particular":"comun",passReal=decodePassword(k),
+    for(const k of filtradas){
+        const idx=vault.indexOf(k),tipo=k.tipo==="Particular"?"particular":"comun",
               usuario=k.usuario||"",servicio=k.servicio||"Sin nombre",card=document.createElement("div");
+        let passReal="";
+        try{passReal=await descifrarClave(k)}catch(e){passReal="";}
         card.className=`cred-card ${tipo}`;
         card.innerHTML=`
             <div class="cred-top"><span class="cred-service" title="${escapeHTML(servicio)}">${escapeHTML(servicio)}</span>
@@ -356,7 +632,7 @@ function renderLista(){
         });
         passCopy.addEventListener("click",()=>copiar(passReal,"PASSWORD"));
         card.querySelector(".delete-btn").addEventListener("click",()=>borrarClave(idx));cont.appendChild(card);
-    });
+    }
 }
 function actualizarContador(total){
     const el=document.getElementById("listCount"),status=document.getElementById("listStatus");
@@ -375,26 +651,62 @@ function lanzarToast(msg){
     const t=document.getElementById("copyToast");if(!t)return;clearTimeout(toastTimer);t.innerText=msg;t.classList.add("show");
     toastTimer=setTimeout(()=>t.classList.remove("show"),1700);
 }
-function borrarClave(idx){
+async function borrarClave(idx){
     if(idx<0||idx>=vault.length)return;const nombre=vault[idx].servicio||"esta credencial";
-    if(confirm(`¿Eliminar "${nombre}" del llavero?`)){vault.splice(idx,1);guardarLocal();renderLista();lanzarToast("✓ CLAVE ELIMINADA")}
+    if(confirm(`¿Eliminar "${nombre}" del llavero?`)){vault.splice(idx,1);await guardarLocal();await renderLista();lanzarToast("✓ CLAVE ELIMINADA")}
 }
 async function descargarNube(){
-    if(!GOOGLE_SCRIPT_URL||busy)return;if(!confirm("¿Descargar las claves desde Google Sheets?"))return;
+    if(!GOOGLE_SCRIPT_URL||busy)return;
+    if(!cryptoKey){lanzarToast("DESBLOQUEA EL VAULT");return}
+    if(!confirm("¿Descargar las claves desde Google Sheets?"))return;
     setBusy(true,"DESCARGANDO…");
     try{
-        const res=await fetch(GOOGLE_SCRIPT_URL+"?action=getVault",{method:"GET",redirect:"follow",cache:"no-store"}),data=await res.json();
+        const res=await fetch(GOOGLE_SCRIPT_URL+"?action=getVault",{method:"GET",redirect:"follow",cache:"no-store"});
+        const data=await res.json();
         if(data.status!=="success")throw new Error(data.message||"Respuesta no válida");
-        vault=Array.isArray(data.vault)?data.vault:[];guardarLocal();renderLista();lanzarToast(`✓ ${vault.length} CLAVES DESCARGADAS`);
-    }catch(err){alert("No se pudieron descargar las claves.\n\n"+err.message)}finally{setBusy(false)}
+
+        const remote=Array.isArray(data.vault)?data.vault:[];
+
+        // First secure import: transparently convert the old base64 format
+        // into AES-GCM ciphertext before it is written locally/cloud.
+        if(remote.some(k=>!esRegistroCifrado(k))){
+            vault=await migrarLegacyVault(remote);
+            await guardarLocal();
+            await renderLista();
+
+            // Persist the migrated ciphertext to Google Sheets so the old
+            // obfuscated copy is replaced by authenticated encryption.
+            try{
+                await fetch(GOOGLE_SCRIPT_URL,{
+                    method:"POST",mode:"no-cors",
+                    headers:{"Content-Type":"application/json"},
+                    body:JSON.stringify({action:"saveVault",vault})
+                });
+            }catch(e){
+                console.warn("La migración local fue correcta; no se pudo confirmar la subida.",e);
+            }
+            lanzarToast(`✓ ${vault.length} CLAVES MIGRADAS A AES-256`);
+        }else{
+            vault=remote;
+            await guardarLocal();
+            await renderLista();
+            lanzarToast(`✓ ${vault.length} CLAVES DESCARGADAS`);
+        }
+    }catch(err){alert("No se pudieron descargar las claves.\n\n"+err.message)}
+    finally{setBusy(false)}
 }
 async function subirNube(){
-    if(!GOOGLE_SCRIPT_URL||busy)return;if(!vault.length){lanzarToast("EL LLAVERO ESTÁ VACÍO");return}
-    if(!confirm(`¿Subir ${vault.length} claves a Google Sheets?`))return;setBusy(true,"GUARDANDO…");
+    if(!GOOGLE_SCRIPT_URL||busy)return;
+    if(!cryptoKey){lanzarToast("DESBLOQUEA EL VAULT");return}
+    if(!vault.length){lanzarToast("EL LLAVERO ESTÁ VACÍO");return}
+    if(vault.some(k=>!esRegistroCifrado(k))){alert("Hay una credencial antigua sin cifrar. No se puede subir el vault hasta convertirla a formato seguro.");return}
+    if(!confirm(`¿Subir ${vault.length} claves cifradas a Google Sheets?`))return;
+    setBusy(true,"GUARDANDO…");
     try{
         await fetch(GOOGLE_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"saveVault",vault})});
-        lanzarToast("✓ GUARDADO EN SHEETS");
-    }catch(err){alert("No se pudo guardar en Google Sheets.\n\n"+err.message)}finally{setBusy(false)}
+        lanzarToast("✓ VAULT CIFRADO GUARDADO");
+    }catch(err){alert("No se pudo guardar en Google Sheets.\n\n"+err.message)}
+    finally{setBusy(false)}
 }
 function setBusy(state,label=""){
     busy=state;const down=document.getElementById("btnDownload"),up=document.getElementById("btnUpload");
@@ -402,10 +714,21 @@ function setBusy(state,label=""){
     if(up){up.disabled=state;up.style.opacity=state?".55":"1"}
 }
 async function exportarComunes(){
-    const comunes=vault.filter(k=>k.tipo==="Común");if(!comunes.length){lanzarToast("NO HAY CLAVES COMUNES");return}
+    const comunes=vault.filter(k=>k.tipo==="Común");
+    if(!comunes.length){lanzarToast("NO HAY CLAVES COMUNES");return}
     let msg="🔐 *CREDENCIALES COMUNES TIENDA*\n\n";
-    comunes.forEach(k=>{const pass=decodePassword(k);msg+=`🖥️ *${String(k.servicio||"").toUpperCase()}*\n`;msg+=`👤 Usuario: \`${k.usuario||"-"}\`\n`;msg+=`🔑 Clave: \`${pass}\`\n`;msg+="───────────────\n"});
-    if(navigator.share){try{await navigator.share({title:"Claves Comunes",text:msg});return}catch(err){if(err&&err.name==="AbortError")return}}
+    for(const k of comunes){
+        let pass="";
+        try{pass=await descifrarClave(k)}catch(e){pass="[NO DISPONIBLE]"}
+        msg+=`🖥️ *${String(k.servicio||"").toUpperCase()}*\n`;
+        msg+=`👤 Usuario: \`${k.usuario||"-"}\`\n`;
+        msg+=`🔑 Clave: \`${pass}\`\n`;
+        msg+="───────────────\n";
+    }
+    if(navigator.share){
+        try{await navigator.share({title:"Claves Comunes",text:msg});return}
+        catch(err){if(err&&err.name==="AbortError")return}
+    }
     copiar(msg,"LISTA");
 }
 let backgroundAt=0;
