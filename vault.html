@@ -1,548 +1,64 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#090614">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="VAULT POCKET · gestor personal de credenciales cifrado localmente">
-<title>VAULT POCKET · SAFEHOUSE</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23151125'/><circle cx='50' cy='50' r='38' fill='none' stroke='%23ffea00' stroke-width='4'/><text x='50' y='64' font-size='40' text-anchor='middle'>🔑</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#080611">
+<title>VAULT POCKET 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-:root{
- --bg:#07050d;--surface:#12101d;--surface2:#191529;--surface3:#0d0a16;--surface4:#211b31;
- --line:#2d2740;--line2:#3a3151;--text:#f8f6ff;--muted:#9b94ae;
- --yellow:#ffea00;--cyan:#00eaff;--green:#24ff7a;--pink:#ff3f9f;--red:#ff4b55;--orange:#ff9d3e;
- --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html{background:var(--bg);color-scheme:dark}
-body{
- min-height:100dvh;color:var(--text);font-family:'Nunito',sans-serif;
- background:
- radial-gradient(circle at 20% -5%,rgba(0,234,255,.10),transparent 26%),
- radial-gradient(circle at 85% 8%,rgba(255,63,159,.10),transparent 25%),
- radial-gradient(circle at 50% 105%,rgba(255,234,0,.08),transparent 34%),
- linear-gradient(180deg,#0a0712 0%,var(--bg) 48%);
- padding:calc(9px + var(--safe-top)) 12px calc(32px + var(--safe-bottom));
- overscroll-behavior-y:contain;
-}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.055;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:22px 22px;mask-image:linear-gradient(to bottom,black,transparent 62%)}
-button,input,select{font:inherit}button{min-height:44px;border-radius:11px;cursor:pointer;touch-action:manipulation}button:disabled{cursor:not-allowed}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
-
-/* Header */
-header{
- position:sticky;top:0;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:10px;
- margin:calc(-9px - var(--safe-top)) -12px 10px;padding:calc(9px + var(--safe-top)) 12px 9px;
- background:rgba(7,5,13,.88);border-bottom:1px solid rgba(255,234,0,.25);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)
-}
-.header-title-box{min-width:0;display:flex;align-items:center;gap:9px}
-.header-icon{position:relative;flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border:1px solid rgba(255,234,0,.55);border-radius:12px;background:linear-gradient(180deg,rgba(255,234,0,.10),rgba(255,234,0,.03));font-size:20px;filter:drop-shadow(0 0 10px rgba(255,234,0,.33));box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
-.header-icon::after{content:"";position:absolute;right:4px;bottom:4px;width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
-.header-title{font-family:'Press Start 2P',cursive;font-size:10px;color:var(--yellow);letter-spacing:.8px;white-space:nowrap;text-shadow:0 0 14px rgba(255,234,0,.17)}
-.header-sub{margin-top:5px;color:var(--muted);font-size:9px;font-weight:900;letter-spacing:.35px}
-.btn-lock-top{flex:0 0 auto;min-height:42px;padding:0 11px;border:1px solid rgba(255,75,85,.68);color:#ff858b;background:rgba(255,75,85,.08);font-family:'Press Start 2P',cursive;font-size:7px;box-shadow:0 3px 0 rgba(255,75,85,.20)}
-.btn-lock-top:active{transform:translateY(2px);box-shadow:none}
-
-/* Hero status */
-.status-card{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,rgba(24,20,40,.97),rgba(13,10,22,.97));box-shadow:0 8px 22px rgba(0,0,0,.24)}
-.status-left{display:flex;align-items:center;min-width:0;gap:9px}.status-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(36,255,122,.08),0 0 12px rgba(36,255,122,.55);flex:0 0 auto}.status-copy{min-width:0}.status-main{font-size:11px;font-weight:1000;letter-spacing:.7px}.status-sub{margin-top:2px;color:var(--muted);font-size:9px;font-weight:800}.status-count{flex:0 0 auto;text-align:right}.status-count strong{display:block;font-family:'Press Start 2P',cursive;font-size:11px;color:var(--yellow)}.status-count span{display:block;margin-top:4px;color:var(--muted);font-size:8px;font-weight:900}
-.status-card.locked .status-dot{background:var(--red);box-shadow:0 0 0 4px rgba(255,75,85,.08),0 0 12px rgba(255,75,85,.35)}
-
-/* Actions */
-.actions-bar{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px}
-.act-btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:49px;padding:8px 7px;border:1px solid var(--line);background:linear-gradient(180deg,var(--surface2),var(--surface));color:var(--text);font-size:12px;font-weight:1000;letter-spacing:.15px;box-shadow:0 3px 0 rgba(0,0,0,.35);transition:transform .12s ease,filter .12s ease,border-color .12s ease}
-.act-btn small{font-size:7px;opacity:.48;margin-left:1px;font-weight:900}.act-btn:active{transform:translateY(2px);box-shadow:none;filter:brightness(1.14)}
-.btn-down{border-color:rgba(0,234,255,.58);color:var(--cyan)}.btn-up{border-color:rgba(36,255,122,.58);color:var(--green)}.btn-new{border-color:rgba(255,234,0,.58);color:var(--yellow)}.btn-backup{border-color:rgba(255,63,159,.58);color:var(--pink)}
-
-.utility-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
-.utility-btn{min-height:37px;padding:0 10px;border:1px solid #332c48;background:rgba(17,14,28,.86);color:#cfc8de;font-size:10px;font-weight:1000;letter-spacing:.35px}.utility-btn:active{transform:translateY(1px)}.utility-btn:disabled{opacity:.45}.utility-btn.undo-ready{border-color:rgba(255,234,0,.45);color:var(--yellow);background:rgba(255,234,0,.05)}
-
-/* Search */
-.search-box{position:sticky;top:calc(58px + var(--safe-top));z-index:45;margin-bottom:10px;padding:3px 0 5px;background:linear-gradient(180deg,rgba(7,5,13,.98),rgba(7,5,13,.90),transparent)}
-.search-wrap{position:relative}.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none;opacity:.76}.search-box input{width:100%;height:48px;padding:0 42px 0 39px;border:1px solid var(--line);border-radius:13px;outline:none;background:rgba(18,16,29,.97);color:var(--text);font-size:15px;font-weight:850;box-shadow:0 5px 18px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.03)}.search-box input::placeholder{color:#6f687f}.search-box input:focus{border-color:rgba(0,234,255,.72);box-shadow:0 0 0 3px rgba(0,234,255,.09),0 5px 18px rgba(0,0,0,.25)}
-.search-clear{position:absolute;right:5px;top:4px;width:40px;height:40px;min-height:40px;border:0;background:transparent;color:var(--muted);font-size:19px;display:none}.search-clear.show{display:block}
-.list-meta{display:flex;align-items:center;justify-content:space-between;min-height:20px;margin:0 2px 8px;color:var(--muted);font-size:10px;font-weight:950;letter-spacing:.38px;text-transform:uppercase}.list-meta #listCount{color:#c9c2d8}.list-meta #listStatus{color:var(--cyan)}
-
-/* New credential */
-.new-card-form{display:none;flex-direction:column;gap:9px;margin-bottom:12px;padding:14px;border:1px solid rgba(255,234,0,.55);border-radius:15px;background:linear-gradient(180deg,rgba(32,26,49,.98),rgba(18,16,29,.98));box-shadow:0 9px 26px rgba(0,0,0,.31)}
-.new-form-title{color:var(--yellow);font-family:'Press Start 2P',cursive;font-size:8px;margin-bottom:2px}.new-form-help{color:var(--muted);font-size:9px;font-weight:800;line-height:1.35}.new-card-form input,.new-card-form select{width:100%;min-height:46px;padding:0 12px;border:1px solid var(--line);border-radius:10px;outline:none;background:var(--surface3);color:var(--text);font-size:14px;font-weight:850}.new-card-form input:focus,.new-card-form select:focus{border-color:rgba(255,234,0,.72)}.form-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}.form-actions button{border:1px solid;background:transparent;padding:0 12px;font-weight:1000}.save-new{border-color:rgba(36,255,122,.72)!important;color:var(--green);background:rgba(36,255,122,.06)!important}.cancel-new{border-color:rgba(255,75,85,.62)!important;color:#ff858b}
-
-/* Cards */
-.vault-list{display:flex;flex-direction:column;gap:10px}.cred-card{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(24,21,38,.99),rgba(13,11,22,.99));border:1px solid var(--line);border-left:4px solid var(--cyan);border-radius:15px;padding:12px;box-shadow:0 7px 21px rgba(0,0,0,.28)}.cred-card.particular{border-left-color:var(--pink)}.cred-card::after{content:"";position:absolute;right:-34px;top:-34px;width:96px;height:96px;border-radius:50%;border:1px solid rgba(255,255,255,.025);box-shadow:0 0 0 18px rgba(255,255,255,.012),0 0 0 36px rgba(255,255,255,.008);pointer-events:none}
-.cred-top{display:flex;align-items:center;gap:9px;margin-bottom:9px}.service-mark{flex:0 0 auto;display:grid;place-items:center;width:37px;height:37px;border-radius:10px;background:rgba(0,234,255,.08);border:1px solid rgba(0,234,255,.28);color:var(--cyan);font-family:'Press Start 2P',cursive;font-size:10px}.cred-card.particular .service-mark{background:rgba(255,63,159,.08);border-color:rgba(255,63,159,.28);color:var(--pink)}.cred-title-box{min-width:0;flex:1}.cred-service{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font-size:15px;font-weight:1000}.cred-meta{margin-top:3px;color:#6f687f;font-size:8px;font-weight:850;letter-spacing:.25px}.cred-badge{flex:0 0 auto;padding:5px 7px;border-radius:999px;font-size:8px;font-weight:1000;letter-spacing:.5px;text-transform:uppercase}.badge-comun{background:rgba(0,234,255,.09);border:1px solid rgba(0,234,255,.52);color:var(--cyan)}.badge-particular{background:rgba(255,63,159,.09);border:1px solid rgba(255,63,159,.52);color:var(--pink)}
-.cred-row{display:flex;align-items:center;gap:7px;min-height:49px;margin-top:7px;padding:5px 6px 5px 11px;border:1px solid rgba(44,38,64,.9);border-radius:10px;background:rgba(7,5,13,.58)}.cred-val{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f3f0fa;font-size:14px;font-weight:850}.cred-val.pass-value{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;letter-spacing:1px}.btn-touch-copy{flex:0 0 auto;width:42px;min-height:40px;padding:0;border:1px solid #352d4b;border-radius:9px;background:#1c1830;color:#fff;display:grid;place-items:center;font-size:16px;transition:transform .1s ease,background .1s ease}.btn-touch-copy:active{transform:scale(.94);background:rgba(0,234,255,.18)}.pass-actions{display:flex;gap:5px}
-.cred-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;color:#777084;font-size:9px;font-weight:850}.footer-left{display:flex;align-items:center;gap:8px;min-width:0}.lock-chip{display:inline-flex;align-items:center;gap:3px;color:#7f778f}.delete-btn,.edit-btn{min-height:34px;padding:0 10px;border-radius:8px;font-size:9px;font-weight:1000}.delete-btn{border:1px solid rgba(255,75,85,.5);color:#ff858b;background:rgba(255,75,85,.05)}.edit-btn{border:1px solid rgba(255,234,0,.40);color:var(--yellow);background:rgba(255,234,0,.035)}.footer-actions{display:flex;gap:5px}
-.edit-panel{display:none;flex-direction:column;gap:8px;margin-top:10px;padding:10px;border:1px solid rgba(255,234,0,.3);border-radius:10px;background:rgba(11,8,18,.7)}.edit-panel.show{display:flex}.edit-panel input,.edit-panel select{width:100%;min-height:43px;padding:0 10px;border:1px solid #352d4b;border-radius:9px;background:#0c0914;color:#fff;font-size:13px;font-weight:850}.edit-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.edit-actions button{min-height:40px;border:1px solid}.edit-save{border-color:rgba(36,255,122,.62);color:var(--green);background:rgba(36,255,122,.05)}.edit-cancel{border-color:rgba(255,75,85,.48);color:#ff858b;background:rgba(255,75,85,.04)}.edit-help{font-size:8px;color:#756e83;font-weight:800}
-
-/* Empty / diagnostics */
-.empty-state{padding:34px 18px;border:1px dashed #302942;border-radius:14px;text-align:center;color:var(--muted);font-size:12px;line-height:1.65;background:rgba(18,16,29,.45)}.empty-icon{display:block;margin-bottom:9px;font-size:31px}.danger-note{margin-top:8px;color:#ff858b;font-size:9px;font-weight:900}
-
-/* Toast */
-#copyToast{position:fixed;left:50%;bottom:calc(18px + var(--safe-bottom));z-index:100000;width:max-content;max-width:calc(100vw - 28px);padding:11px 16px;transform:translate(-50%,90px);border:1px solid rgba(0,0,0,.22);border-radius:999px;background:var(--yellow);color:#090614;font-family:'Press Start 2P',cursive;font-size:8px;line-height:1.4;text-align:center;box-shadow:0 7px 25px rgba(0,0,0,.36),0 0 18px rgba(255,234,0,.20);opacity:0;transition:all .25s cubic-bezier(.175,.885,.32,1.275);pointer-events:none}#copyToast.show{transform:translate(-50%,0);opacity:1}
-
-/* Auth */
-.auth-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:calc(18px + var(--safe-top)) 18px calc(18px + var(--safe-bottom));background:radial-gradient(circle at 50% 30%,rgba(83,43,139,.26),transparent 44%),#090614}.auth-box{width:min(100%,358px);padding:22px 18px 18px;border:1px solid rgba(255,234,0,.62);border-radius:19px;background:rgba(21,17,37,.97);box-shadow:0 18px 60px rgba(0,0,0,.52),0 0 30px rgba(255,234,0,.10);text-align:center}.auth-logo{display:grid;place-items:center;width:60px;height:60px;margin:0 auto 12px;border:1px solid rgba(255,234,0,.54);border-radius:17px;background:rgba(255,234,0,.07);font-size:29px;box-shadow:0 0 25px rgba(255,234,0,.08)}.auth-title{color:var(--yellow);font-family:'Press Start 2P',cursive;font-size:9px}.auth-subtitle{margin-top:8px;color:var(--muted);font-size:11px;font-weight:850}.pin-screen-val{min-height:58px;display:grid;place-items:center;margin:15px 0 12px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#07040f;color:var(--yellow);font-family:'Press Start 2P',cursive;font-size:22px;letter-spacing:8px;box-shadow:inset 0 2px 8px rgba(0,0,0,.4)}.keypad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.key-btn{min-height:58px;border:1px solid #332b48;border-radius:11px;background:linear-gradient(180deg,#211b36,#19152a);color:#fff;font-family:'Press Start 2P',cursive;font-size:16px;box-shadow:0 3px 0 rgba(0,0,0,.35)}.key-btn:active{transform:translateY(2px);background:#302645;box-shadow:none}.pin-danger{color:var(--red)!important}.pin-ok{color:var(--green)!important}#pinError{min-height:15px;margin-top:9px;color:var(--red);font-size:10px;font-weight:900;line-height:1.35}.auth-note{margin-top:8px;padding-top:9px;border-top:1px solid rgba(255,255,255,.05);color:#6f687f;font-size:8px;line-height:1.45;font-weight:800}
-
-/* File dialog helper */
-#backupFileInput{display:none}
-@media(min-width:620px){body{max-width:640px;margin:0 auto;padding-left:18px;padding-right:18px}header{margin-left:-18px;margin-right:-18px;padding-left:18px;padding-right:18px}.actions-bar{grid-template-columns:repeat(4,1fr)}.utility-bar{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:340px){body{padding-left:9px;padding-right:9px}.header-title{font-size:8px}.header-sub{font-size:8px}.act-btn{font-size:10px}.cred-service{font-size:14px}.btn-touch-copy{width:40px}.cred-badge{font-size:7px;padding-left:6px;padding-right:6px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+:root{--bg:#080611;--panel:#141126;--panel2:#0e0b1b;--line:#2d2648;--yellow:#ffea00;--cyan:#00eaff;--green:#00f06a;--pink:#ff3aa7;--red:#ff4968;--muted:#8f89a5;--white:#f7f7ff}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}body{min-height:100vh;background:radial-gradient(circle at 50% 0,#21133b 0,transparent 52%),var(--bg);color:var(--white);font-family:Nunito,sans-serif;padding:12px 14px 70px}button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px;border-bottom:2px solid var(--yellow);margin-bottom:12px}.brand{display:flex;align-items:center;gap:10px}.logo{width:46px;height:46px;border:1.5px solid var(--yellow);border-radius:14px;display:grid;place-items:center;font-size:25px;background:#171229;box-shadow:0 0 18px #ffea0030}.title{font:11px 'Press Start 2P';color:var(--yellow);letter-spacing:1px}.sub{font-size:10px;color:var(--muted);font-weight:900;margin-top:5px}.lock{background:#171229;border:1.5px solid var(--red);color:var(--red);padding:10px 11px;border-radius:10px;font:8px 'Press Start 2P';box-shadow:2px 2px 0 #741d34}.status{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);background:#111022;border-radius:14px;padding:11px 13px;margin-bottom:10px}.status-left{display:flex;gap:9px;align-items:center}.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}.status strong{font-size:12px}.status small{display:block;color:var(--muted);font-size:9px;margin-top:2px}.count{text-align:right;color:var(--yellow);font:15px 'Press Start 2P'}.count small{color:var(--muted);font:8px Nunito}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}.act{padding:12px 6px;border-radius:11px;background:var(--panel);border:1.5px solid var(--line);color:var(--white);font:8px 'Press Start 2P';box-shadow:2px 2px 0 #050409}.act:active{transform:translate(1px,1px);box-shadow:none}.down{color:var(--cyan);border-color:var(--cyan)}.up{color:var(--green);border-color:var(--green)}.new{color:var(--yellow);border-color:var(--yellow)}.copy{color:var(--pink);border-color:var(--pink)}
+.search{margin-bottom:10px}.search input{width:100%;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:#0c0916;color:white;outline:none;font-size:15px;font-weight:800}.search input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #00eaff18}
+.form,.modal{background:var(--panel);border:1.5px solid var(--yellow);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 8px 28px #0008}.form h3,.modal h3{font:10px 'Press Start 2P';color:var(--yellow);margin-bottom:12px}.form input,.form select,.modal input,.modal select{width:100%;padding:12px;margin-bottom:8px;border-radius:10px;border:1px solid var(--line);background:#0b0814;color:white;outline:none}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.form-actions{display:flex;gap:8px}.smallbtn{flex:1;padding:11px;border-radius:9px;background:#18132b;border:1px solid var(--line);color:white}.save{color:var(--green);border-color:var(--green)}.cancel{color:var(--red);border-color:var(--red)}
+.list{display:flex;flex-direction:column;gap:11px}.card{background:rgba(20,17,38,.96);border:1px solid var(--line);border-left:5px solid var(--cyan);border-radius:16px;padding:13px;box-shadow:0 7px 22px #0008}.card.particular{border-left-color:var(--pink)}.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.service{font-size:16px;font-weight:900;word-break:break-word}.badge{font-size:8px;font-weight:900;padding:4px 7px;border:1px solid var(--cyan);color:var(--cyan);border-radius:8px;white-space:nowrap}.particular .badge{border-color:var(--pink);color:var(--pink)}.row{display:flex;align-items:center;gap:8px;background:#0b0814;border:1px solid #211b36;border-radius:11px;padding:9px 10px;margin-top:7px}.value{min-width:0;flex:1;font-size:14px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tool{width:42px;height:38px;border-radius:10px;background:#19142d;border:1px solid #31284c;color:white;font-size:17px}.footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;color:var(--muted);font-size:9px}.footer-actions{display:flex;gap:6px}.edit,.del{background:transparent;padding:7px 9px;border-radius:8px;font:8px 'Press Start 2P'}.edit{border:1px solid var(--yellow);color:var(--yellow)}.del{border:1px solid var(--red);color:var(--red)}
+.empty{text-align:center;padding:42px 18px;color:var(--muted);border:1px dashed var(--line);border-radius:16px;font-size:12px;line-height:1.6}.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#18132b;border:1px solid var(--cyan);color:white;padding:11px 15px;border-radius:12px;font-weight:900;font-size:11px;opacity:0;pointer-events:none;transition:.2s;z-index:20}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.overlay{position:fixed;inset:0;background:#06040ddd;backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px;z-index:30}.auth{width:min(360px,100%);background:#121022;border:1.5px solid var(--yellow);border-radius:20px;padding:22px;text-align:center;box-shadow:0 15px 60px #000}.auth h2{font:12px 'Press Start 2P';color:var(--yellow);margin-bottom:12px}.pin{font:24px 'Press Start 2P';letter-spacing:7px;height:38px;margin-bottom:15px}.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.key{height:55px;background:#19142d;border:1px solid var(--line);border-radius:12px;color:white;font:15px 'Press Start 2P'}.key.ok{color:var(--green);border-color:var(--green)}.key.del{color:var(--red);border-color:var(--red)}.hint{font-size:10px;color:var(--muted);margin-top:13px;line-height:1.5}
 </style>
 </head>
 <body>
-
-<div class="auth-overlay" id="authScreen">
- <div class="auth-box">
-  <div class="auth-logo">🔐</div>
-  <div class="auth-title">ACCESO RESTRINGIDO</div>
-  <div class="auth-subtitle">Introduce tu PIN maestro</div>
-  <div class="pin-screen-val" id="pinDisplay">----</div>
-  <div class="keypad-grid">
-   <button class="key-btn" onclick="tocarPin('1')">1</button><button class="key-btn" onclick="tocarPin('2')">2</button><button class="key-btn" onclick="tocarPin('3')">3</button>
-   <button class="key-btn" onclick="tocarPin('4')">4</button><button class="key-btn" onclick="tocarPin('5')">5</button><button class="key-btn" onclick="tocarPin('6')">6</button>
-   <button class="key-btn" onclick="tocarPin('7')">7</button><button class="key-btn" onclick="tocarPin('8')">8</button><button class="key-btn" onclick="tocarPin('9')">9</button>
-   <button class="key-btn pin-danger" onclick="borrarPin()" style="font-size:10px;">DEL</button><button class="key-btn" onclick="tocarPin('0')">0</button><button class="key-btn pin-ok" onclick="validarPin()" style="font-size:10px;">OK</button>
-  </div>
-  <div id="pinError">PIN INCORRECTO</div>
-  <div class="auth-note">AES-256 · PBKDF2-SHA-256 · sincronización segura entre dispositivos</div>
- </div>
-</div>
-
-<div id="copyToast">COPIADO AL PORTAPAPELES</div>
-<input type="file" id="backupFileInput" accept="application/json,.json" onchange="importarCopiaDesdeInput(event)">
-
-<header>
- <div class="header-title-box">
-  <span class="header-icon">🔑</span>
-  <div><div class="header-title">VAULT POCKET</div><div class="header-sub">SAFEHOUSE · cifrado local · v2.1</div></div>
- </div>
- <button class="btn-lock-top" onclick="bloquearApp()">BLOQUEAR</button>
-</header>
-
-<section class="status-card locked" id="statusCard">
- <div class="status-left"><span class="status-dot"></span><div class="status-copy"><div class="status-main" id="statusMain">VAULT BLOQUEADO</div><div class="status-sub" id="statusSub">Las contraseñas no salen del dispositivo en claro</div></div></div>
- <div class="status-count"><strong id="vaultCounter">0</strong><span>CLAVES</span></div>
-</section>
-
-<div class="actions-bar">
- <button class="act-btn btn-down" id="btnDownload" onclick="descargarNube()">☁️ BAJAR <small>CLOUD</small></button>
- <button class="act-btn btn-up" id="btnUpload" onclick="subirNube()">☁️ SUBIR <small>CLOUD</small></button>
- <button class="act-btn btn-new" onclick="toggleFormNuevo()">＋ NUEVA</button>
- <button class="act-btn btn-backup" onclick="abrirMenuCopia()">💾 COPIA</button>
-</div>
-
-<div class="utility-bar">
- <button class="utility-btn" onclick="exportarComunes()">↗ EXPORTAR COMUNES</button>
- <button class="utility-btn" id="btnUndo" onclick="deshacerUltimoCambio()" disabled>↶ DESHACER ÚLTIMO CAMBIO</button>
-</div>
-
-<div class="search-box"><div class="search-wrap"><span class="search-icon">⌕</span><input type="search" id="searchInput" autocomplete="off" autocapitalize="none" placeholder="Buscar servicio o usuario…" oninput="filtrar(this.value)"><button class="search-clear" id="searchClear" aria-label="Limpiar búsqueda" onclick="limpiarBusqueda()">×</button></div></div>
-<div class="list-meta"><span id="listCount">0 CLAVES</span><span id="listStatus">BLOQUEADO</span></div>
-<div style="margin:0 2px 10px;padding:8px 10px;border:1px solid rgba(0,234,255,.18);border-radius:10px;background:rgba(0,234,255,.035);color:#81798f;font-size:8px;font-weight:850;line-height:1.4;">☁️ <b style="color:#a9a1b6;">MULTIDISPOSITIVO:</b> la copia cloud conserva la configuración pública de cifrado; la contraseña sigue protegida por tu PIN.</div>
-
-<div class="new-card-form" id="newCardForm">
- <div class="new-form-title">＋ NUEVA CREDENCIAL</div>
- <div class="new-form-help">La contraseña se cifra en este dispositivo antes de guardarla.</div>
- <input type="text" id="newServicio" autocomplete="off" placeholder="Servicio (ej. Portal, Correo)">
- <input type="text" id="newUsuario" autocomplete="username" placeholder="Usuario">
- <input type="password" id="newPass" autocomplete="new-password" placeholder="Contraseña">
- <select id="newTipo" aria-label="Tipo de credencial"><option value="Común">Común</option><option value="Particular">Particular</option></select>
- <div class="form-actions"><button class="save-new" onclick="guardarNuevaClave()">GUARDAR</button><button class="cancel-new" onclick="toggleFormNuevo()">CANCELAR</button></div>
-</div>
-
-<div class="vault-list" id="vaultList"></div>
-
+<div id="auth" class="overlay"><div class="auth"><h2>🔐 VAULT POCKET</h2><div id="pin" class="pin">----</div><div class="keys"><button class="key" onclick="pinKey('1')">1</button><button class="key" onclick="pinKey('2')">2</button><button class="key" onclick="pinKey('3')">3</button><button class="key" onclick="pinKey('4')">4</button><button class="key" onclick="pinKey('5')">5</button><button class="key" onclick="pinKey('6')">6</button><button class="key" onclick="pinKey('7')">7</button><button class="key" onclick="pinKey('8')">8</button><button class="key" onclick="pinKey('9')">9</button><button class="key del" onclick="pinClear()">DEL</button><button class="key" onclick="pinKey('0')">0</button><button class="key ok" onclick="unlock()">OK</button></div><div class="hint">Llavero personal · protección de acceso local</div></div></div>
+<header><div class="brand"><div class="logo">🔑</div><div><div class="title">VAULT POCKET</div><div class="sub">SAFEHOUSE · SIMPLE · FIABLE</div></div></div><button class="lock" onclick="lockApp()">BLOQUEAR</button></header>
+<div class="status"><div class="status-left"><span class="dot"></span><div><strong>VAULT DESBLOQUEADO</strong><small>Datos locales · nube opcional</small></div></div><div class="count"><span id="count">0</span><small>CLAVES</small></div></div>
+<div class="actions"><button class="act down" onclick="downloadCloud()">☁ BAJAR</button><button class="act up" onclick="uploadCloud()">☁ SUBIR</button><button class="act new" onclick="toggleNew()">＋ NUEVA</button><button class="act copy" onclick="backup()">💾 COPIA</button><button class="act" style="color:#ff9f43;border-color:#ff9f43" onclick="undoLast()">↶ DESHACER</button></div>
+<div class="search"><input id="search" placeholder="🔎 Buscar servicio o usuario…" oninput="render()"></div>
+<div id="newForm" class="form hidden"><h3>NUEVA CREDENCIAL</h3><input id="ns" placeholder="Servicio (ej. Correo, SARA)"><input id="nu" placeholder="Usuario"><input id="np" type="text" placeholder="Contraseña"><div class="form-row"><select id="nt"><option>Común</option><option>Particular</option></select><button class="smallbtn save" onclick="addCredential()">GUARDAR</button></div></div>
+<div id="list" class="list"></div>
+<div id="editModal" class="overlay hidden"><div class="modal"><h3>EDITAR CREDENCIAL</h3><input id="es"><input id="eu"><input id="ep" type="text"><select id="et"><option>Común</option><option>Particular</option></select><div class="form-actions"><button class="smallbtn cancel" onclick="closeEdit()">CANCELAR</button><button class="smallbtn save" onclick="saveEdit()">GUARDAR</button></div></div></div>
+<div id="toast" class="toast"></div>
 <script>
-const GOOGLE_SCRIPT_URL="https://script.google.com/macros/s/AKfycbzr27kS6ZtDX3GSqjWRUTGxF1Uecp1x96yVAaPmPB4h2ogTRRcBdcR31IcUG0ZI3CNu/exec";
-const SECURITY_VERSION=2;
-const PBKDF2_ITERATIONS=250000;
-const VAULT_STORAGE_KEY="arcade_vault_secure";
-const AUTH_STORAGE_KEY="arcade_vault_auth";
-const LEGACY_STORAGE_KEY="arcade_vault";
-const BACKUP_STORAGE_KEY="arcade_vault_backups";
-const SYNC_AUTH_FIELD="_vaultSyncAuth";
-const MAX_BACKUPS=5;
-const AUTO_LOCK_MS=5*60*1000;
-
-let vault=[],filtroTexto="",pinBuffer="",toastTimer=null,busy=false;
-let cryptoKey=null,securityMeta=null,latestDeleted=null,backgroundAt=0;
-window._setupMode=false;
-
-async function iniciar(){
- try{await cargarConfiguracionSegura()}catch(e){console.error("No se pudo inicializar la seguridad",e)}
- actualizarBusquedaUI();actualizarEstadoUI();
- if(!securityMeta){
-   const secureExists=!!localStorage.getItem(VAULT_STORAGE_KEY);
-   if(secureExists)mostrarEstadoRecuperacion();else mostrarConfiguracionInicial();
- }
-}
-function arrayBufferToBase64(buffer){let bytes=new Uint8Array(buffer),binary="";const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(binary)}
-function base64ToArrayBuffer(base64){const binary=atob(base64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes.buffer}
-function randomBytes(length){return crypto.getRandomValues(new Uint8Array(length))}
-async function deriveKey(pin,salt,usage=["encrypt","decrypt"]){const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:PBKDF2_ITERATIONS,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,usage)}
-async function deriveVerifier(pin,salt){const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:PBKDF2_ITERATIONS,hash:"SHA-256"},material,256);return arrayBufferToBase64(bits)}
-async function encryptText(value){if(!cryptoKey)throw new Error("Vault bloqueado");return encryptTextWithKey(value,cryptoKey)}
-async function encryptTextWithKey(value,key){if(!key)throw new Error("Clave criptográfica no disponible");const iv=randomBytes(12);const data=new TextEncoder().encode(String(value));const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,data);return{v:SECURITY_VERSION,iv:arrayBufferToBase64(iv),data:arrayBufferToBase64(encrypted)}}
-async function decryptText(record){if(!cryptoKey)throw new Error("Vault bloqueado");return decryptTextWithKey(record,cryptoKey)}
-async function decryptTextWithKey(record,key){if(!key)throw new Error("Clave criptográfica no disponible");if(!record||record.v!==SECURITY_VERSION||typeof record.iv!=="string"||typeof record.data!=="string")throw new Error("Registro cifrado inválido");const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:new Uint8Array(base64ToArrayBuffer(record.iv))},key,base64ToArrayBuffer(record.data));return new TextDecoder().decode(plain)}
-function borrarSesion(){cryptoKey=null;vault=[];latestDeleted=null;actualizarEstadoUI()}
-
-function actualizarEstadoUI(){
- const unlocked=!!cryptoKey;
- const status=document.getElementById("listStatus");if(status)status.innerText=unlocked?"AES-256 · PROTEGIDO":"BLOQUEADO";
- const card=document.getElementById("statusCard");if(card)card.classList.toggle("locked",!unlocked);
- const main=document.getElementById("statusMain");if(main)main.innerText=unlocked?"VAULT DESBLOQUEADO":"VAULT BLOQUEADO";
- const sub=document.getElementById("statusSub");if(sub)sub.innerText=unlocked?"AES-256 local · nube compatible con varios dispositivos":"Las contraseñas no salen del dispositivo en claro";
- const count=document.getElementById("vaultCounter");if(count)count.innerText=String(Array.isArray(vault)?vault.length:0);
- const listCount=document.getElementById("listCount");if(listCount)listCount.innerText=`${Array.isArray(vault)?vault.length:0} CLAVES`;
- const undo=document.getElementById("btnUndo");if(undo){undo.disabled=!latestDeleted;undo.classList.toggle("undo-ready",!!latestDeleted)}
-}
-function mostrarConfiguracionInicial(){
- document.getElementById("authScreen").style.display="flex";document.querySelector(".auth-title").innerText="CONFIGURA TU VAULT";document.querySelector(".auth-subtitle").innerText="Crea un PIN de 6 dígitos";
- const e=document.getElementById("pinError");e.innerText="El PIN protegerá el contenido con AES-256.";e.style.display="block";e.style.color="var(--muted)";window._setupMode=true;
-}
-function mostrarEstadoRecuperacion(){
- document.getElementById("authScreen").style.display="flex";document.querySelector(".auth-title").innerText="RECUPERACIÓN NECESARIA";document.querySelector(".auth-subtitle").innerText="Hay un vault cifrado pero falta su configuración de acceso";
- const e=document.getElementById("pinError");e.innerText="NO CREES UN PIN NUEVO NI BORRES LOS DATOS. Usa la herramienta de recuperación.";e.style.display="block";e.style.color="var(--orange)";window._setupMode=false;
-}
-function decodificarLegacy(valor){try{return decodeURIComponent(atob(valor))}catch(e){return String(valor??"")}}
-function parseLooseObject(value){
- if(value&&typeof value==="object")return value;
- if(typeof value!=="string")return null;
- const s=value.trim();
- if(!s)return null;
- try{const parsed=JSON.parse(s);if(parsed&&typeof parsed==="object")return parsed}catch(_){}
- // Google Sheets / Apps Script / Java-like string representation:
- // {v=2, iv=AAAA..., data=BBBB...}
- if(s[0]==="{"&&s[s.length-1]==="}"){
-   const out={};
-   for(const part of s.slice(1,-1).split(/\s*,\s*/)){
-     const eq=part.indexOf("=");
-     if(eq>0)out[part.slice(0,eq).trim()]=part.slice(eq+1).trim();
-   }
-   return Object.keys(out).length?out:null;
- }
- return null;
-}
-function normalizarCifrado(k){
- if(!k||typeof k!=="object")return k;
- const parsed=parseLooseObject(k.passwordCifrada);
- if(parsed)k.passwordCifrada=parsed;
- return k;
-}
-function serializarCifradoParaCloud(record){
- const parsed=parseLooseObject(record);
- return parsed?JSON.stringify(parsed):record;
-}
-function serializarAuthParaCloud(meta){
- const parsed=parseLooseObject(meta);
- return parsed?JSON.stringify(parsed):meta;
-}
-function esRegistroCifrado(k){
- const c=parseLooseObject(k?.passwordCifrada);
- return!!(c&&Number(c.v)===SECURITY_VERSION&&typeof c.iv==="string"&&typeof c.data==="string")
-}
-async function migrarLegacyVault(legacyVault,key=cryptoKey){
- if(!Array.isArray(legacyVault))return [];
- const migrado=[];
- for(const k of legacyVault){
-   if(!k||typeof k!=="object")throw new Error("Se encontró un registro antiguo inválido.");
-   let password;
-   normalizarCifrado(k);
-   if(esRegistroCifrado(k)){
-      migrado.push({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:k.passwordCifrada});continue;
-   }
-   if(typeof k.passwordCifrada==="string")password=decodificarLegacy(k.passwordCifrada);
-   else if(k.passwordCifrada&&typeof k.passwordCifrada==="object")throw new Error(`La credencial "${k.servicio||"sin nombre"}" tiene un cifrado desconocido y no se tocará.`);
-   else password="";
-   migrado.push({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:await encryptTextWithKey(password,key)});
- }
- return migrado;
-}
-
-async function configurarPIN(){
- const pin=pinBuffer;if(!/^\d{6}$/.test(pin)){mostrarErrorPIN("Usa exactamente 6 dígitos.");return}
- try{
-  const salt=randomBytes(16),key=await deriveKey(pin,salt),verifier=await deriveVerifier(pin,salt);
-  const oldSecure=localStorage.getItem(VAULT_STORAGE_KEY);
-  securityMeta={version:SECURITY_VERSION,kdf:"PBKDF2-SHA256",iterations:PBKDF2_ITERATIONS,salt:arrayBufferToBase64(salt),verifier};cryptoKey=key;
-  let source=[];try{const legacyRaw=localStorage.getItem(LEGACY_STORAGE_KEY);if(legacyRaw)source=JSON.parse(legacyRaw)}catch(e){source=[]}
-  if(Array.isArray(source)&&source.length){vault=await migrarLegacyVault(source)}
-  else if(oldSecure){throw new Error("Ya existe un vault cifrado en este dispositivo. No se va a sobreescribir.")}
-  else vault=[];
-  guardarAuthMeta();await guardarLocal("configuración inicial");
-  // IMPORTANT: keep the old copy as a safety net; deletion is manual later.
-  document.getElementById("authScreen").style.display="none";borrarPin();window._setupMode=false;actualizarEstadoUI();renderLista();
-  lanzarToast(vault.length?`✓ VAULT PROTEGIDO · ${vault.length} CLAVES`:`✓ VAULT CREADO · 0 CLAVES`);
- }catch(e){
-  console.error(e);borrarSesion();
-  try{if(!securityMeta)localStorage.removeItem(AUTH_STORAGE_KEY)}catch(_){}
-  mostrarErrorPIN(e.message||"No se pudo crear el vault seguro.");
- }
-}
-async function validarPin(){
- const pin=pinBuffer;
- if(window._setupMode){await configurarPIN();return}
- if(!securityMeta){mostrarEstadoRecuperacion();return}
- if(!/^\d{6}$/.test(pin)){mostrarErrorPIN("Introduce los 6 dígitos.");return}
- try{
-  const salt=new Uint8Array(base64ToArrayBuffer(securityMeta.salt));const verifier=await deriveVerifier(pin,salt);if(verifier!==securityMeta.verifier)throw new Error("PIN incorrecto");
-  const key=await deriveKey(pin,salt);cryptoKey=key;await cargarVaultLocalSeguro();
-  document.getElementById("authScreen").style.display="none";borrarPin();window._setupMode=false;actualizarEstadoUI();renderLista();lanzarToast(`✓ DESBLOQUEADO · ${vault.length} CLAVES`);
- }catch(e){borrarSesion();document.getElementById("pinDisplay").innerText="ERROR";mostrarErrorPIN(e.message==="PIN incorrecto"?"PIN INCORRECTO":"VAULT NO VÁLIDO");if(navigator.vibrate)navigator.vibrate([35,30,35]);setTimeout(borrarPin,700)}
-}
-function mostrarErrorPIN(msg){const e=document.getElementById("pinError");e.innerText=msg;e.style.display="block";e.style.color=msg.includes("PIN")?"var(--red)":"var(--orange)";if(navigator.vibrate)navigator.vibrate([25,20,25])}
-function tocarPin(n){if(pinBuffer.length<6){pinBuffer+=n;document.getElementById("pinDisplay").innerText="*".repeat(pinBuffer.length);if(navigator.vibrate)navigator.vibrate(12)}}
-function borrarPin(){pinBuffer="";document.getElementById("pinDisplay").innerText="----";if(!window._setupMode){const e=document.getElementById("pinError");e.style.display="none";e.innerText=""}}
-function bloquearApp(){borrarSesion();document.getElementById("authScreen").style.display="flex";document.getElementById("newCardForm").style.display="none";const title=document.querySelector(".auth-title"),sub=document.querySelector(".auth-subtitle");if(title)title.innerText="ACCESO RESTRINGIDO";if(sub)sub.innerText="Introduce tu PIN maestro";window._setupMode=false;borrarPin();actualizarEstadoUI();window.scrollTo({top:0,behavior:"smooth"})}
-
-async function cargarConfiguracionSegura(){try{const raw=localStorage.getItem(AUTH_STORAGE_KEY);securityMeta=raw?JSON.parse(raw):null;if(securityMeta&&securityMeta.version!==SECURITY_VERSION)securityMeta=null}catch(e){securityMeta=null}}
-function guardarAuthMeta(){localStorage.setItem(AUTH_STORAGE_KEY,JSON.stringify(securityMeta))}
-async function cargarVaultLocalSeguro(){
- const raw=localStorage.getItem(VAULT_STORAGE_KEY);if(!raw){vault=[];return}
- const payload=JSON.parse(raw);if(payload.version!==SECURITY_VERSION||!Array.isArray(payload.vault))throw new Error("Formato seguro inválido");
- vault=payload.vault.map(item=>normalizarCifrado({servicio:item.servicio||"",usuario:item.usuario||"",tipo:item.tipo||"Común",fechaModif:item.fechaModif||"",passwordCifrada:item.passwordCifrada}));
-}
-async function verificarVaultCifrado(items,key=cryptoKey){
- if(!Array.isArray(items))throw new Error("Vault inválido");
- for(const k of items){
-  normalizarCifrado(k);
-  if(!esRegistroCifrado(k))throw new Error(`La credencial "${k?.servicio||"sin nombre"}" no tiene un cifrado válido.`);
-  await decryptTextWithKey(parseLooseObject(k.passwordCifrada),key);
- }
- return true;
-}
-async function protegerVault(){
- if(!cryptoKey)throw new Error("Vault bloqueado");
- const out=[];
- for(const k of vault){
-  normalizarCifrado(k);
-  if(!esRegistroCifrado(k))throw new Error(`La credencial "${k?.servicio||"sin nombre"}" no está cifrada.`);
-  out.push({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:parseLooseObject(k.passwordCifrada)});
- }
- return{version:SECURITY_VERSION,vault:out};
-}
-function leerBackups(){try{const raw=localStorage.getItem(BACKUP_STORAGE_KEY);const items=raw?JSON.parse(raw):[];return Array.isArray(items)?items:[]}catch(e){return[]}}
-function guardarBackups(items){localStorage.setItem(BACKUP_STORAGE_KEY,JSON.stringify(items.slice(0,MAX_BACKUPS)))}
-function crearSnapshotLocal(reason="cambio local"){
- const rawSecure=localStorage.getItem(VAULT_STORAGE_KEY),rawAuth=localStorage.getItem(AUTH_STORAGE_KEY);if(!rawSecure||!rawAuth)return;
- const items=leerBackups();items.unshift({version:1,createdAt:new Date().toISOString(),reason,secure:rawSecure,auth:rawAuth});guardarBackups(items);actualizarEstadoUI();
-}
-async function guardarLocal(reason="cambio local"){
- const payload=await protegerVault();
- crearSnapshotLocal(reason);
- localStorage.setItem(VAULT_STORAGE_KEY,JSON.stringify(payload));
- actualizarEstadoUI();
-}
-function filtrar(val){filtroTexto=String(val||"").toLowerCase().trim();actualizarBusquedaUI();renderLista()}
-function limpiarBusqueda(){const input=document.getElementById("searchInput");input.value="";filtrar("");input.focus()}
-function actualizarBusquedaUI(){const clear=document.getElementById("searchClear");if(clear)clear.classList.toggle("show",filtroTexto.length>0)}
-function toggleFormNuevo(){const f=document.getElementById("newCardForm"),abierto=f.style.display==="flex";f.style.display=abierto?"none":"flex";if(!abierto)setTimeout(()=>document.getElementById("newServicio").focus(),80)}
-async function guardarNuevaClave(){
- const s=document.getElementById("newServicio").value.trim(),u=document.getElementById("newUsuario").value.trim(),p=document.getElementById("newPass").value,t=document.getElementById("newTipo").value;
- if(!s||!p){lanzarToast("FALTAN SERVICIO Y CONTRASEÑA");(!s?document.getElementById("newServicio"):document.getElementById("newPass")).focus();return}
- try{
-  const passwordCifrada=await encryptText(p),hoy=new Date(),fechaStr=`${String(hoy.getDate()).padStart(2,"0")}/${String(hoy.getMonth()+1).padStart(2,"0")}/${hoy.getFullYear()}`;
-  vault.push({servicio:s,usuario:u,passwordCifrada,tipo:t,fechaModif:fechaStr});await guardarLocal("añadir credencial");renderLista();
-  document.getElementById("newServicio").value="";document.getElementById("newUsuario").value="";document.getElementById("newPass").value="";document.getElementById("newTipo").value="Común";toggleFormNuevo();lanzarToast("✓ CLAVE AÑADIDA");
- }catch(e){console.error(e);lanzarToast("⚠️ NO SE PUDO GUARDAR")}
-}
-function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]))}
-function initials(text){const clean=String(text||"").trim();if(!clean)return"?";const parts=clean.split(/\s+/);return(parts.length>1?parts[0][0]+parts[1][0]:clean.slice(0,2)).toUpperCase()}
-function actualizarContador(n){const el=document.getElementById("vaultCounter");if(el)el.textContent=String(Number(n)||0);const c=document.getElementById("listCount");if(c)c.textContent=`${Number(n)||0} CLAVES`}
-
-function renderLista(){
- const cont=document.getElementById("vaultList");if(!cont)return;cont.innerHTML="";actualizarEstadoUI();actualizarContador(Array.isArray(vault)?vault.length:0);
- if(!Array.isArray(vault)||vault.length===0){cont.innerHTML='<div class="empty-state"><span class="empty-icon">🗝️</span><strong>LLAVERO VACÍO</strong><br>Usa <b>BAJAR</b> para traer tus credenciales del cloud o <b>NUEVA</b> para empezar.</div>';return}
- const filtradas=vault.map((k,i)=>({k,i})).filter(({k})=>{if(!filtroTexto)return true;const s=String(k?.servicio||"").toLowerCase(),u=String(k?.usuario||"").toLowerCase();return s.includes(filtroTexto)||u.includes(filtroTexto)});
- filtradas.sort((a,b)=>String(a.k?.servicio||"").localeCompare(String(b.k?.servicio||""),"es",{sensitivity:"base"}));actualizarContador(filtradas.length);
- if(!filtradas.length){cont.innerHTML=`<div class="empty-state"><span class="empty-icon">🔎</span>No se encontraron resultados para<br><strong>"${escapeHTML(filtroTexto)}"</strong></div>`;return}
- for(const {k,i:idx} of filtradas){
-  const particular=k?.tipo==="Particular",tipo=particular?"particular":"comun",usuario=String(k?.usuario||""),servicio=String(k?.servicio||"Sin nombre");
-  const card=document.createElement("div");card.className=`cred-card ${tipo}`;
-  card.innerHTML=`<div class="cred-top"><span class="service-mark">${escapeHTML(initials(servicio))}</span><div class="cred-title-box"><div class="cred-service" title="${escapeHTML(servicio)}">${escapeHTML(servicio)}</div><div class="cred-meta">${usuario?escapeHTML(usuario):"SIN USUARIO"}</div></div><span class="cred-badge badge-${tipo}">${escapeHTML(k?.tipo||"Común")}</span></div>
-   <div class="cred-row"><span class="cred-val" title="${escapeHTML(usuario)}">${usuario?escapeHTML(usuario):'<span style="color:#665f73;">Sin usuario</span>'}</span><button class="btn-touch-copy user-copy" aria-label="Copiar usuario">📋</button></div>
-   <div class="cred-row"><span class="cred-val pass-value">••••••••</span><div class="pass-actions"><button class="btn-touch-copy pass-toggle" aria-label="Mostrar contraseña">👁️</button><button class="btn-touch-copy pass-copy" aria-label="Copiar contraseña">🔑</button></div></div>
-   <div class="edit-panel"><div class="edit-help">Deja la contraseña vacía para conservar la actual.</div><input class="edit-service" type="text" value="${escapeHTML(servicio)}" placeholder="Servicio"><input class="edit-user" type="text" value="${escapeHTML(usuario)}" placeholder="Usuario"><input class="edit-pass" type="password" placeholder="Nueva contraseña"><select class="edit-type"><option value="Común" ${!particular?'selected':''}>Común</option><option value="Particular" ${particular?'selected':''}>Particular</option></select><div class="edit-actions"><button class="edit-save">GUARDAR CAMBIOS</button><button class="edit-cancel">CANCELAR</button></div></div>
-   <div class="cred-footer"><div class="footer-left"><span>Modif. ${escapeHTML(String(k?.fechaModif||"-"))}</span><span class="lock-chip">🔒 AES</span></div><div class="footer-actions"><button class="edit-btn">EDITAR</button><button class="delete-btn">BORRAR</button></div></div>`;
-  card.querySelector(".user-copy").addEventListener("click",()=>copiar(usuario,"USUARIO"));
-  const passValue=card.querySelector(".pass-value"),passToggle=card.querySelector(".pass-toggle"),passCopy=card.querySelector(".pass-copy");let revealTimer=null;
-  const obtenerPassword=async()=>{try{
-   normalizarCifrado(k);
-   const pass=await decryptText(k.passwordCifrada);
-   if(typeof pass!=="string")throw new Error("La contraseña descifrada no es texto.");
-   return pass;
-  }catch(e){console.error("No se pudo descifrar la credencial",e);lanzarToast("⚠️ NO SE PUEDE DESCIFRAR");return null}};
-  passToggle.addEventListener("click",async()=>{if(revealTimer)clearTimeout(revealTimer);const visible=passValue.dataset.visible==="1";if(visible){passValue.innerText="••••••••";passValue.dataset.visible="0";passToggle.innerText="👁️";return}const pass=await obtenerPassword();if(pass===null)return;passValue.innerText=pass||"(vacía)";passValue.dataset.visible="1";passToggle.innerText="🙈";revealTimer=setTimeout(()=>{passValue.innerText="••••••••";passValue.dataset.visible="0";passToggle.innerText="👁️"},10000)});
-  passCopy.addEventListener("click",async()=>{const pass=await obtenerPassword();if(pass!==null)copiar(pass,"PASSWORD")});
-  card.querySelector(".delete-btn").addEventListener("click",()=>borrarClave(idx));
-  const editPanel=card.querySelector(".edit-panel");card.querySelector(".edit-btn").addEventListener("click",()=>editPanel.classList.toggle("show"));card.querySelector(".edit-cancel").addEventListener("click",()=>editPanel.classList.remove("show"));
-  card.querySelector(".edit-save").addEventListener("click",async()=>{const ns=card.querySelector(".edit-service").value.trim(),nu=card.querySelector(".edit-user").value.trim(),np=card.querySelector(".edit-pass").value,nt=card.querySelector(".edit-type").value;if(!ns){lanzarToast("FALTA EL SERVICIO");return}try{const old=vault[idx];let encrypted=old.passwordCifrada;if(np.length>0)encrypted=await encryptText(np);const now=new Date(),fecha=`${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`;vault[idx]={servicio:ns,usuario:nu,tipo:nt,fechaModif:fecha,passwordCifrada:encrypted};await guardarLocal("editar credencial");renderLista();lanzarToast("✓ CAMBIOS GUARDADOS")}catch(e){console.error(e);lanzarToast("⚠️ NO SE PUDO GUARDAR")}});
-  cont.appendChild(card);
- }
-}
-async function copiar(txt,tipoLabel){if(txt===undefined||txt===null||txt===""){lanzarToast("NO HAY NADA QUE COPIAR");return}try{await navigator.clipboard.writeText(String(txt))}catch(e){const ta=document.createElement("textarea");ta.value=String(txt);ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy")}catch(_){}ta.remove()}if(navigator.vibrate)navigator.vibrate(35);lanzarToast(`✓ ${tipoLabel} COPIADO`)}
-function lanzarToast(msg){const t=document.getElementById("copyToast");if(!t)return;clearTimeout(toastTimer);t.innerText=msg;t.classList.add("show");toastTimer=setTimeout(()=>t.classList.remove("show"),1800)}
-async function borrarClave(idx){
- if(idx<0||idx>=vault.length)return;const nombre=vault[idx].servicio||"esta credencial";if(!confirm(`¿Eliminar "${nombre}" del llavero?\n\nPodrás usar DESHACER mientras esta sesión siga abierta.`))return;
- latestDeleted={index:idx,record:vault[idx],removedAt:Date.now()};vault.splice(idx,1);
- try{await guardarLocal("borrar credencial");renderLista();lanzarToast("✓ CLAVE ELIMINADA · DESHACER DISPONIBLE")}catch(e){vault.splice(idx,0,latestDeleted.record);latestDeleted=null;actualizarEstadoUI();lanzarToast("⚠️ NO SE PUDO BORRAR")}
-}
-function publicarAuth(meta){
- meta=parseLooseObject(meta);
- if(!meta||typeof meta.salt!=="string"||typeof meta.verifier!=="string")return null;
- return {version:SECURITY_VERSION,kdf:"PBKDF2-SHA256",iterations:PBKDF2_ITERATIONS,salt:meta.salt,verifier:meta.verifier};
-}
-function authEsValida(meta){return!!(meta&&meta.version===SECURITY_VERSION&&meta.kdf==="PBKDF2-SHA256"&&Number(meta.iterations)===PBKDF2_ITERATIONS&&typeof meta.salt==="string"&&typeof meta.verifier==="string")}
-function authIgual(a,b){return !!(authEsValida(a)&&authEsValida(b)&&a.salt===b.salt&&a.verifier===b.verifier)}
-function extraerAuthRemota(data,remote){
- const candidates=[];
- if(data&&typeof data==="object")candidates.push(data.auth,data.syncAuth,data.meta);
- if(Array.isArray(remote)){
-  for(const k of remote){
-   normalizarCifrado(k);
-   if(k&&typeof k==="object"&&k[SYNC_AUTH_FIELD]){candidates.push(k[SYNC_AUTH_FIELD]);break}
-  }
- }
- for(const meta of candidates){const parsed=publicarAuth(meta);if(parsed&&authEsValida(parsed))return parsed}
- return null;
-}
-async function obtenerClaveParaAuthRemota(remoteAuth){
- if(!authEsValida(remoteAuth))return {key:cryptoKey,auth:securityMeta,remote:false};
- if(authIgual(remoteAuth,securityMeta))return {key:cryptoKey,auth:securityMeta,remote:false};
- const pin=window.prompt("VAULT MULTIDISPOSITIVO\n\nLa copia de Google Sheets usa otra sal/clave de cifrado.\n\nIntroduce tu PIN maestro de 6 dígitos para verificarla y abrirla en este dispositivo:","");
- if(pin===null)throw new Error("Importación cancelada.");
- if(!/^\d{6}$/.test(pin))throw new Error("El PIN debe tener exactamente 6 dígitos.");
- const salt=new Uint8Array(base64ToArrayBuffer(remoteAuth.salt));
- const verifier=await deriveVerifier(pin,salt);
- if(verifier!==remoteAuth.verifier)throw new Error("El PIN no coincide con la copia de Google Sheets.");
- const key=await deriveKey(pin,salt);
- return {key,auth:remoteAuth,remote:true};
-}
-
-function normalizarVaultRemoto(raw){
- let source=[];
- if(Array.isArray(raw))source=raw;
- else if(raw&&typeof raw==="object"){
-  if(Array.isArray(raw.vault))source=raw.vault;
-  else if(Array.isArray(raw.data))source=raw.data;
-  else if(typeof raw.vault==="string")return normalizarVaultRemoto(raw.vault);
-  else if(typeof raw.data==="string")return normalizarVaultRemoto(raw.data);
- }else if(typeof raw==="string"){
-  try{return normalizarVaultRemoto(JSON.parse(raw))}catch(e){return[]}
- }
- return source.map(k=>normalizarCifrado({...k}));
-}
-function validarRegistrosRemotos(items){if(!Array.isArray(items))throw new Error("Google Sheets no devolvió una lista válida.");for(const k of items){if(!k||typeof k!=="object")throw new Error("Se encontró una credencial con formato inválido.");if(typeof k.servicio!=="string")throw new Error("Se encontró una credencial sin servicio válido.")}}
-async function descargarNube(){
- if(!GOOGLE_SCRIPT_URL||busy)return;if(!cryptoKey){lanzarToast("DESBLOQUEA EL VAULT");return}
- const hayLocal=vault.length>0;
- const mensaje=hayLocal?`☁️ BAJAR DESDE CLOUD\n\nLocal: ${vault.length} claves.\n\nSe comprobará primero la copia de Google Sheets. Si pertenece a otro dispositivo, podrás verificarla con tu PIN y se adoptará su configuración de cifrado.\n\nNO se escribirá nada en Google Sheets.\n\n¿Continuar?`:`☁️ BAJAR DESDE CLOUD\n\nSe comprobará la copia de Google Sheets y se cargará sólo si todas las claves se pueden descifrar.\n\nNO se escribirá nada en Google Sheets.\n\n¿Continuar?`;
- if(!confirm(mensaje))return;
- setBusy(true,"BAJANDO…");
- const oldVault=vault,oldAuth=securityMeta,oldKey=cryptoKey;
- try{
-  const res=await fetch(GOOGLE_SCRIPT_URL+"?action=getVault&ts="+Date.now(),{method:"GET",redirect:"follow",cache:"no-store"});
-  if(!res.ok)throw new Error(`Google Sheets respondió con HTTP ${res.status}.`);
-  const data=await res.json();if(data.status!=="success")throw new Error(data.message||"Respuesta no válida de Google Sheets.");
-  const remote=normalizarVaultRemoto(data.vault??data.data??data);validarRegistrosRemotos(remote);
-  if(!remote.length){lanzarToast("⚠️ GOOGLE SHEETS ESTÁ VACÍO");return}
-  const remoteAuth=extraerAuthRemota(data,remote);
-  const keyInfo=await obtenerClaveParaAuthRemota(remoteAuth);
-  let candidate;
-  if(remote.some(k=>!esRegistroCifrado(k))){
-    candidate=await migrarLegacyVault(remote,keyInfo.key);
-  }else{
-    candidate=remote.map(k=>normalizarCifrado({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:k.passwordCifrada}));
-  }
-  await verificarVaultCifrado(candidate,keyInfo.key);
-  if(!candidate.length)throw new Error("La copia remota no contiene credenciales.");
-  if(!confirm(`✓ COPIA COMPROBADA\n\nSe han podido descifrar ${candidate.length} claves.\n${keyInfo.remote?"\nEsta copia procede de otro dispositivo y usa una configuración de cifrado compartida por cloud.":""}\n\nSe guardará primero un respaldo del llavero local actual.\n\n¿CARGAR ESTA COPIA?`))return;
-  crearSnapshotLocal("antes de importar desde cloud");
-  vault=candidate;
-  if(keyInfo.remote){securityMeta=keyInfo.auth;cryptoKey=keyInfo.key;guardarAuthMeta()}
-  localStorage.setItem(VAULT_STORAGE_KEY,JSON.stringify(await protegerVault()));
-  latestDeleted=null;renderLista();
-  lanzarToast(`✓ ${vault.length} CLAVES CARGADAS · MULTIDISPOSITIVO`);
- }catch(err){
-  vault=oldVault;securityMeta=oldAuth;cryptoKey=oldKey;
-  console.error("Error al descargar vault:",err);
-  alert("❌ NO SE HA CAMBIADO EL LLAVERO\n\n"+(err.message||"Error desconocido.")+"\n\nEl llavero local anterior sigue intacto.");
- }finally{setBusy(false)}
-}
-async function subirNube(){
- if(!GOOGLE_SCRIPT_URL||busy)return;if(!cryptoKey||!securityMeta){lanzarToast("DESBLOQUEA EL VAULT");return}
- if(!vault.length){lanzarToast("EL LLAVERO ESTÁ VACÍO");return}
- try{await verificarVaultCifrado(vault)}catch(e){alert("❌ NO SE PUEDE SUBIR\n\n"+e.message);return}
- const auth=publicarAuth(securityMeta);if(!auth)throw new Error("No se ha podido preparar la configuración de cifrado.");
- const cloudVault=vault.map(k=>({...k,passwordCifrada:serializarCifradoParaCloud(k.passwordCifrada),[SYNC_AUTH_FIELD]:serializarAuthParaCloud(auth)}));
- crearSnapshotLocal("antes de subir a cloud");
- const mensaje=`☁️ SUBIR VAULT\n\nSe enviarán ${vault.length} claves cifradas.\n\nAdemás se guardará la información pública necesaria para que OTRO dispositivo pueda derivar la misma clave a partir de tu PIN.\n\nGoogle Sheets reemplazará su copia actual.\n\n¿ESTÁS SEGURO?`;
- if(!confirm(mensaje))return;
- setBusy(true,"SUBIENDO…");
- try{
-  await fetch(GOOGLE_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"saveVault",format:"VAULT-POCKET-SYNC",version:1,auth,vault:cloudVault})});
-  lanzarToast("✓ CLOUD ACTUALIZADO · MULTIDISPOSITIVO");
- }catch(err){console.error(err);alert("❌ NO SE HA PODIDO ENVIAR EL VAULT\n\n"+(err.message||"Error desconocido."))}finally{setBusy(false)}
-}
-function setBusy(state,label=""){
- busy=state;const down=document.getElementById("btnDownload"),up=document.getElementById("btnUpload");for(const btn of [down,up])if(btn){btn.disabled=state;btn.style.opacity=state?".55":"1";if(state){if(!btn.dataset.original)btn.dataset.original=btn.innerHTML;btn.innerText=label||"…"}else btn.innerHTML=btn.dataset.original||btn.innerHTML}actualizarEstadoUI()
-}
-
-function descargarArchivo(nombre,contenido,tipo="application/json"){const blob=new Blob([contenido],{type:tipo});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-function abrirMenuCopia(){
- const accion=prompt("COPIA DE SEGURIDAD\n\n1 = Exportar copia cifrada\n2 = Importar una copia\n3 = Cancelar\n\nEscribe 1, 2 o 3", "1");
- if(accion==="1")exportarCopiaCifrada();else if(accion==="2")document.getElementById("backupFileInput").click();
-}
-function exportarCopiaCifrada(){
- if(!cryptoKey||!securityMeta||!localStorage.getItem(VAULT_STORAGE_KEY)){lanzarToast("DESBLOQUEA EL VAULT");return}
- const payload={format:"VAULT-POCKET-BACKUP",version:1,createdAt:new Date().toISOString(),auth:securityMeta,secure:JSON.parse(localStorage.getItem(VAULT_STORAGE_KEY))};
- const stamp=new Date().toISOString().replace(/[:.]/g,"-");descargarArchivo(`vault-pocket-copia-${stamp}.json`,JSON.stringify(payload,null,2));lanzarToast("✓ COPIA CIFRADA EXPORTADA")
-}
-async function importarCopiaDesdeInput(event){
- const file=event.target.files?.[0];event.target.value="";if(!file)return;if(!cryptoKey||!securityMeta){lanzarToast("DESBLOQUEA EL VAULT");return}
- try{
-  const payload=JSON.parse(await file.text());if(payload.format!=="VAULT-POCKET-BACKUP"||payload.version!==1||!payload.auth||!payload.secure)throw new Error("Archivo de copia no reconocido.");
-  if(payload.secure.version!==SECURITY_VERSION||!Array.isArray(payload.secure.vault))throw new Error("Formato de vault incompatible.");
-  const remoteAuth=publicarAuth(payload.auth);if(!remoteAuth)throw new Error("La copia no contiene una configuración de cifrado válida.");
-  const keyInfo=await obtenerClaveParaAuthRemota(remoteAuth);
-  const candidate=payload.secure.vault.map(k=>normalizarCifrado({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:k.passwordCifrada}));await verificarVaultCifrado(candidate,keyInfo.key);
-  if(!confirm(`✓ COPIA COMPROBADA\n\nLa copia contiene ${candidate.length} credenciales y todas se pueden descifrar.${keyInfo.remote?"\n\nProcede de otro dispositivo; se adaptará este dispositivo a la misma configuración de cifrado.":""}\n\nSe guardará una copia del estado actual antes de restaurarla.\n\n¿Restaurar?`))return;
-  crearSnapshotLocal("antes de restaurar copia");
-  vault=candidate;securityMeta=keyInfo.auth;cryptoKey=keyInfo.key;guardarAuthMeta();localStorage.setItem(VAULT_STORAGE_KEY,JSON.stringify(await protegerVault()));
-  latestDeleted=null;renderLista();lanzarToast(`✓ COPIA RESTAURADA · ${vault.length} CLAVES`);
- }catch(e){console.error(e);alert("❌ NO SE HA RESTAURADO LA COPIA\n\n"+(e.message||"Archivo no válido."))}
-}
-
-function obtenerUltimoBackup(){const items=leerBackups();return items[0]||null}
-async function restaurarBackupInterno(){
- if(!cryptoKey||!securityMeta){lanzarToast("DESBLOQUEA EL VAULT");return}
- const item=obtenerUltimoBackup();if(!item){lanzarToast("NO HAY COPIAS LOCALES");return}
- try{const auth=JSON.parse(item.auth),secure=JSON.parse(item.secure);if(auth.verifier!==securityMeta.verifier||auth.salt!==securityMeta.salt)throw new Error("La copia local pertenece a otro PIN.");const candidate=secure.vault.map(k=>normalizarCifrado({servicio:k.servicio||"",usuario:k.usuario||"",tipo:k.tipo||"Común",fechaModif:k.fechaModif||"",passwordCifrada:k.passwordCifrada}));await verificarVaultCifrado(candidate);if(!confirm(`Última copia: ${new Date(item.createdAt).toLocaleString("es-ES")}\nMotivo: ${item.reason}\n\nContiene ${candidate.length} credenciales.\n\n¿Restaurar?`))return;crearSnapshotLocal("antes de restaurar copia interna");vault=candidate;localStorage.setItem(VAULT_STORAGE_KEY,JSON.stringify(secure));latestDeleted=null;renderLista();lanzarToast("✓ ÚLTIMA COPIA RESTAURADA")}catch(e){console.error(e);alert("❌ NO SE HA PODIDO RESTAURAR\n\n"+(e.message||"Copia dañada."))}
-}
-// Public button retained as a quick, obvious route to the last safety snapshot.
-function deshacerUltimoCambio(){
- // When a delete is pending, restore just that record. Otherwise restore the last local snapshot.
- if(latestDeleted){deshacerBorradoPendiente();return}
- restaurarBackupInterno();
-}
-async function deshacerBorradoPendiente(){const item=latestDeleted;if(!item)return;if(!confirm(`Recuperar "${item.record.servicio||"la credencial"}"?`))return;const place=Math.min(item.index,vault.length);vault.splice(place,0,item.record);try{await guardarLocal("deshacer borrado");latestDeleted=null;renderLista();lanzarToast("↶ CLAVE RECUPERADA")}catch(e){vault.splice(place,1);lanzarToast("⚠️ NO SE PUDO RECUPERAR")}}
-
-async function exportarComunes(){
- if(!vault.length){lanzarToast("NO HAY CLAVES");return}
- const comunes=vault.filter(k=>k.tipo==="Común");if(!comunes.length){lanzarToast("NO HAY CLAVES COMUNES");return}
- let msg="🔐 *CREDENCIALES COMUNES TIENDA*\n\n";for(const k of comunes){let pass="";try{pass=await decryptText(k.passwordCifrada)}catch(e){pass="[NO DISPONIBLE]"}msg+=`🖥️ *${String(k.servicio||"").toUpperCase()}*\n`;msg+=`👤 Usuario: \`${k.usuario||"-"}\`\n`;msg+=`🔑 Clave: \`${pass}\`\n`;msg+="───────────────\n"}
- if(navigator.share){try{await navigator.share({title:"Claves Comunes",text:msg});return}catch(err){if(err&&err.name==="AbortError")return}}copiar(msg,"LISTA")
-}
-
-// Auto-lock after 5 minutes in background.
-document.addEventListener("visibilitychange",()=>{if(document.hidden)backgroundAt=Date.now();else if(backgroundAt&&Date.now()-backgroundAt>AUTO_LOCK_MS){backgroundAt=0;bloquearApp()}});
-window.addEventListener("DOMContentLoaded",iniciar);
+const PIN='1981';
+// Sustituir por la URL del nuevo despliegue de Apps Script cuando esté creado.
+const CLOUD_URL='https://script.google.com/macros/s/AKfycbzr27kS6ZtDX3GSqjWRUTGxF1Uecp1x96yVAaPmPB4h2ogTRRcBdcR31IcUG0ZI3CNu/exec';
+const KEY='arcade_vault'; const BACKUP_KEY='arcade_vault_backup';
+let vault=[],pinBuf='',editIndex=-1;
+function legacyDecode(v){try{return decodeURIComponent(atob(v))}catch(e){return String(v??'')}}
+function legacyEncode(v){return btoa(encodeURIComponent(String(v??'')))}
+function load(){try{const raw=localStorage.getItem(KEY);vault=raw?JSON.parse(raw):[]}catch(e){vault=[]}normalize();render()}
+function normalize(){if(!Array.isArray(vault))vault=[];vault=vault.map(x=>({...x,servicio:String(x.servicio??''),usuario:String(x.usuario??''),tipo:x.tipo==='Particular'?'Particular':'Común',fechaModif:String(x.fechaModif??''),passwordCifrada:typeof x.passwordCifrada==='string'?x.passwordCifrada:legacyEncode('')}))}
+function commit(previous,reason='cambio'){localStorage.setItem(BACKUP_KEY,JSON.stringify({when:new Date().toISOString(),reason,vault:previous}));localStorage.setItem(KEY,JSON.stringify(vault))}
+function undoLast(){try{const raw=localStorage.getItem(BACKUP_KEY);if(!raw){toast('NO HAY DESHACER DISPONIBLE');return}const b=JSON.parse(raw);if(!Array.isArray(b.vault)){toast('COPIA DE DESHACER INVÁLIDA');return}if(!confirm('¿Restaurar el último estado guardado?'))return;vault=b.vault;normalize();localStorage.setItem(KEY,JSON.stringify(vault));render();toast('↶ ÚLTIMO CAMBIO DESHECHO')}catch(e){toast('⚠ NO SE PUDO DESHACER')}}
+function today(){const d=new Date();return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`}
+function pinKey(n){if(pinBuf.length<6){pinBuf+=n;document.getElementById('pin').textContent='•'.repeat(pinBuf.length)}}
+function pinClear(){pinBuf='';document.getElementById('pin').textContent='----'}
+function unlock(){if(pinBuf===PIN){document.getElementById('auth').classList.add('hidden');pinClear();load()}else{document.getElementById('pin').textContent='ERROR';setTimeout(pinClear,650)}}
+function lockApp(){document.getElementById('auth').classList.remove('hidden');pinClear()}
+function toast(s){const t=document.getElementById('toast');t.textContent=s;t.classList.add('show');clearTimeout(window._toast);window._toast=setTimeout(()=>t.classList.remove('show'),1800)}
+function toggleNew(){document.getElementById('newForm').classList.toggle('hidden')}
+function addCredential(){const s=document.getElementById('ns').value.trim(),u=document.getElementById('nu').value.trim(),p=document.getElementById('np').value,t=document.getElementById('nt').value;if(!s||!p){toast('⚠ FALTA SERVICIO O CONTRASEÑA');return}const previous=JSON.parse(JSON.stringify(vault));vault.push({servicio:s,usuario:u,passwordCifrada:legacyEncode(p),tipo:t,fechaModif:today()});commit(previous,'antes de alta');render();['ns','nu','np'].forEach(id=>document.getElementById(id).value='');toggleNew();toast('✓ CLAVE AÑADIDA')}
+function render(){const q=document.getElementById('search').value.trim().toLowerCase(),list=document.getElementById('list');document.getElementById('count').textContent=vault.length;list.innerHTML='';const items=vault.map((x,i)=>({x,i})).filter(({x})=>!q||x.servicio.toLowerCase().includes(q)||x.usuario.toLowerCase().includes(q)).sort((a,b)=>a.x.servicio.localeCompare(b.x.servicio,'es',{sensitivity:'base'}));if(!items.length){list.innerHTML='<div class="empty">'+(vault.length?'NO HAY RESULTADOS.':'LLAVERO VACÍO.<br>Usa ＋ NUEVA o ☁ BAJAR.')+'</div>';return}for(const {x,i} of items){const card=document.createElement('div');card.className='card '+(x.tipo==='Particular'?'particular':'');const pass=legacyDecode(x.passwordCifrada);card.innerHTML=`<div class="top"><div class="service"></div><span class="badge">${esc(x.tipo)}</span></div><div class="row"><span class="value">${esc(x.usuario)||'<span style="color:#777">(Sin usuario)</span>'}</span><button class="tool" title="Copiar usuario">📋</button></div><div class="row"><span class="value pass">••••••••</span><button class="tool eye">👁️</button><button class="tool keycopy">🔑</button></div><div class="footer"><span>Modif. ${esc(x.fechaModif)||'—'}</span><div class="footer-actions"><button class="edit">EDITAR</button><button class="del">BORRAR</button></div></div>`;card.querySelector('.service').textContent=x.servicio;card.querySelector('.tool').onclick=()=>copy(x.usuario,'USUARIO');card.querySelector('.eye').onclick=()=>{const el=card.querySelector('.pass');el.textContent=el.textContent==='••••••••'?pass:'••••••••'};card.querySelector('.keycopy').onclick=()=>copy(pass,'CONTRASEÑA');card.querySelector('.edit').onclick=()=>openEdit(i);card.querySelector('.del').onclick=()=>deleteCredential(i);list.appendChild(card)}}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function copy(v,label){try{await navigator.clipboard.writeText(String(v??''));toast('✓ '+label+' COPIADO')}catch(e){toast('⚠ NO SE PUDO COPIAR')}}
+function deleteCredential(i){if(!confirm(`¿Borrar “${vault[i].servicio}”?`))return;const previous=JSON.parse(JSON.stringify(vault));vault.splice(i,1);commit(previous,'antes de borrado');render();toast('↶ CLAVE BORRADA · COPIA DISPONIBLE')}
+function openEdit(i){editIndex=i;const x=vault[i];document.getElementById('es').value=x.servicio;document.getElementById('eu').value=x.usuario;document.getElementById('ep').value=legacyDecode(x.passwordCifrada);document.getElementById('et').value=x.tipo;document.getElementById('editModal').classList.remove('hidden')}
+function closeEdit(){document.getElementById('editModal').classList.add('hidden');editIndex=-1}
+function saveEdit(){if(editIndex<0)return;const s=document.getElementById('es').value.trim(),u=document.getElementById('eu').value.trim(),p=document.getElementById('ep').value,t=document.getElementById('et').value;if(!s||!p){toast('⚠ FALTAN DATOS');return}const previous=JSON.parse(JSON.stringify(vault));vault[editIndex]={...vault[editIndex],servicio:s,usuario:u,passwordCifrada:legacyEncode(p),tipo:t,fechaModif:today()};commit(previous,'antes de edición');closeEdit();render();toast('✓ CAMBIOS GUARDADOS')}
+function backup(){const data={format:'VAULT-POCKET-SIMPLE',version:2,created:new Date().toISOString(),vault};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='vault-pocket-backup.json';a.click();URL.revokeObjectURL(a.href);toast('💾 COPIA DESCARGADA')}
+function normalizeRemote(data){let v=data?.vault??data?.data??data;if(typeof v==='string'){try{v=JSON.parse(v)}catch(e){}}return Array.isArray(v)?v:[]}
+async function downloadCloud(){if(!CLOUD_URL){toast('⚠ CONFIGURA LA NUBE');return}if(!confirm('¿Reemplazar las claves de ESTE dispositivo con la copia de Google Sheets?'))return;try{toast('☁ BAJANDO…');const r=await fetch(CLOUD_URL+'?action=getVault&ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();if(data.status&&data.status!=='success')throw new Error(data.message||'Respuesta no válida');const remote=normalizeRemote(data);if(!remote.length){throw new Error('Google Sheets devolvió 0 claves')};const previous=JSON.parse(JSON.stringify(vault));vault=remote;normalize();commit(previous,'antes de BAJAR');render();toast('✓ '+vault.length+' CLAVES DESCARGADAS')}catch(e){toast('❌ NO SE PUDO BAJAR');alert('No se ha cambiado el llavero local.\n\nMotivo: '+e.message)}}
+async function uploadCloud(){if(!CLOUD_URL){toast('⚠ CONFIGURA LA NUBE');return}if(!vault.length){toast('⚠ LLAVERO VACÍO');return}if(!confirm(`¿Reemplazar la copia de Google Sheets con tus ${vault.length} claves?`))return;try{localStorage.setItem(BACKUP_KEY,JSON.stringify({when:new Date().toISOString(),reason:'antes de SUBIR',vault:JSON.parse(JSON.stringify(vault))}));toast('☁ SUBIENDO…');await fetch(CLOUD_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'saveVault',vault})});toast('✓ ENVÍO REALIZADO · revisa la nube antes de borrar nada')}catch(e){toast('❌ NO SE PUDO ENVIAR');alert('El llavero local sigue intacto.\n\nMotivo: '+e.message)}}
+window.addEventListener('load',()=>document.getElementById('auth').classList.remove('hidden'));
 </script>
-</body>
-</html>
+</body></html>
